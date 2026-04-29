@@ -1,5 +1,6 @@
 // Use WebAssembly version of face-api to avoid tfjs-node dependency
 // This version doesn't require Visual Studio Build Tools or native compilation
+const tf = require('@tensorflow/tfjs');
 const faceapi = require('@vladmandic/face-api/dist/face-api.node-wasm.js');
 
 const canvas = require('canvas');
@@ -31,6 +32,9 @@ const loadModels = async () => {
         'https://github.com/vladmandic/face-api/tree/master/model'
       );
     }
+
+    // Initialize TensorFlow.js WASM backend before loading models
+    await tf.ready();
 
     // Load required models
     await Promise.all([

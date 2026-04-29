@@ -175,11 +175,17 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     try {
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
       
-      console.log('Loading face detection models...');
+      console.log('Loading face-api.js models...');
       
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      // Load all models needed for detection and recognition
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),       // Fast real-time detection
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),          // Accurate detection
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),       // Face landmarks
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),      // Face recognition descriptors
+      ]);
       
-      console.log('Face detection models loaded successfully');
+      console.log('Face-api.js models loaded successfully (detection + recognition)');
       setIsModelLoaded(true);
       setModelError(null);
     } catch (err) {
