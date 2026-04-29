@@ -1,101 +1,71 @@
 # Face Recognition Model Setup
 
-## ⚠️ IMPORTANT: Models Required for Enrollment
+## ✅ Models Are Now Bundled
 
-The enrollment system requires face-api.js models for face detection and recognition.
+The required face-api.js model files are included in the repository under `backend/models/face-api/`.
+No manual download is required — just install npm dependencies and start the server.
 
-## Quick Download - Option 1: Direct Download (Recommended)
+## Models Included
 
-**Download the complete model package:**
+| File | Purpose | Size |
+|------|---------|------|
+| `ssd_mobilenetv1_model.bin` + manifest | Face detection | ~5.4 MB |
+| `face_landmark_68_model.bin` + manifest | Face landmarks (68 points) | ~349 KB |
+| `face_recognition_model.bin` + manifest | 128-D face descriptor | ~6.2 MB |
+| `tiny_face_detector_model.bin` + manifest | Lightweight real-time detection | ~189 KB |
 
-1. Visit: https://github.com/vladmandic/face-api/tree/master/model
-2. Click on each file and download:
-   - Click the file name
-   - Click the "Download raw file" button
-   - Save to `backend/models/face-api/`
+## Backend Setup
 
-## Option 2: Manual URLs
-
-1. **Create models directory** (already created at `models/face-api/`)
-
-2. **Download these files to `backend/models/face-api/`:**
-
-### SSD MobileNet V1 (Face Detection)
-- `ssd_mobilenetv1_model-weights_manifest.json`
-- `ssd_mobilenetv1_model-shard1`
-
-### Face Landmark 68 Net
-- `face_landmark_68_model-weights_manifest.json`
-- `face_landmark_68_model-shard1`
-
-### Face Recognition Net
-- `face_recognition_model-weights_manifest.json`
-- `face_recognition_model-shard1`
-- `face_recognition_model-shard2`
-
-## Quick Setup (Windows PowerShell)
-
-```powershell
-# Create directory
-New-Item -ItemType Directory -Force -Path "models\face-api"
-
-# Download models (requires curl or wget)
-cd models\face-api
-
-# SSD MobileNet V1
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vladmandic/face-api/master/model/ssd_mobilenetv1_model-weights_manifest.json" -OutFile "ssd_mobilenetv1_model-weights_manifest.json"
-Invoke-WebRequest -Uri "https://github.com/vladmandic/face-api/raw/master/model/ssd_mobilenetv1_model-shard1" -OutFile "ssd_mobilenetv1_model-shard1"
-
-# Face Landmark 68
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vladmandic/face-api/master/model/face_landmark_68_model-weights_manifest.json" -OutFile "face_landmark_68_model-weights_manifest.json"
-Invoke-WebRequest -Uri "https://github.com/vladmandic/face-api/raw/master/model/face_landmark_68_model-shard1" -OutFile "face_landmark_68_model-shard1"
-
-# Face Recognition
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vladmandic/face-api/master/model/face_recognition_model-weights_manifest.json" -OutFile "face_recognition_model-weights_manifest.json"
-Invoke-WebRequest -Uri "https://github.com/vladmandic/face-api/raw/master/model/face_recognition_model-shard1" -OutFile "face_recognition_model-shard1"
-Invoke-WebRequest -Uri "https://github.com/vladmandic/face-api/raw/master/model/face_recognition_model-shard2" -OutFile "face_recognition_model-shard2"
-
-cd ..\..
+```bash
+cd backend
+npm install
+npm start
 ```
 
-## Verify Installation
-
-Your directory structure should look like:
-```
-/backend
-  ├── models/
-  │   └── face-api/
-  │       ├── ssd_mobilenetv1_model-weights_manifest.json
-  │       ├── ssd_mobilenetv1_model-shard1
-  │       ├── face_landmark_68_model-weights_manifest.json
-  │       ├── face_landmark_68_model-shard1
-  │       ├── face_recognition_model-weights_manifest.json
-  │       ├── face_recognition_model-shard1
-  │       └── face_recognition_model-shard2
-```
-
-## Test Models
-
-Start the server and make an enrollment request. If models are loaded correctly, you'll see:
+On first request the server logs:
 ```
 Face recognition models loaded successfully
+```
+
+## Frontend Models (CDN)
+
+The React frontend loads models from the jsDelivr CDN at runtime:
+
+```
+https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model
+```
+
+Models loaded in the browser:
+- `tinyFaceDetector` — real-time face detection bounding boxes
+- `ssdMobilenetv1` — accurate detection for descriptor extraction
+- `faceLandmark68Net` — face landmark detection
+- `faceRecognitionNet` — 128-D descriptor for recognition
+
+## Architecture
+
+```
+Browser (face-api.js)               Backend (face-api.js / WASM)
+─────────────────────               ──────────────────────────
+Camera live feed ──────────────────►  POST /api/enroll
+ └─ Real-time detection                └─ extractFaceDescriptorFromBase64()
+ └─ Capture frame (JPEG base64)         └─ Save descriptor to DB
+
+Face login page ────────────────────►  POST /api/auth/face-login
+ └─ Capture frame (JPEG base64)         └─ extractFaceDescriptorFromBase64()
+                                         └─ Compare against all stored descriptors
+                                         └─ Return matched user + JWT
 ```
 
 ## Troubleshooting
 
 **Error: Face recognition models not found**
-- Ensure models are in `backend/models/face-api/`
-- Check file names match exactly (case-sensitive)
-- Verify all 7 files are present
+- Ensure you have run `git pull` to get the latest model files
+- Check `backend/models/face-api/` contains `*.bin` and `*-weights_manifest.json` files
 
-**Error: Failed to load models**
-- Check file permissions
-- Ensure files are not corrupted
-- Re-download the models
+**Error: WASM backend not initialized**
+- This is fixed in `utils/faceDetection.js` via `await tf.ready()` before model loading
 
-## Model Sizes
+**Frontend models fail to load**
+- Check internet connection (models loaded from CDN)
+- Browser console will show the specific model that failed
 
-- SSD MobileNet V1: ~5.7 MB
-- Face Landmark 68: ~350 KB
-- Face Recognition: ~6.2 MB
-- **Total: ~12.3 MB**
