@@ -11,7 +11,17 @@ loadModels().catch((error) => {
 // @access  Private (Admin/SuperAdmin)
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    let query = {};
+    
+    // Admin can only see users they created
+    if (req.user.role === 'admin') {
+      query.createdBy = req.user._id;
+    }
+    // Superadmin can see all users (no filter applied)
+    
+    const users = await User.find(query)
+      .select('-password')
+      .populate('createdBy', 'name email role');
     
     res.status(200).json({
       success: true,
@@ -31,7 +41,9 @@ exports.getUsers = async (req, res) => {
 // @access  Private
 exports.getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('createdBy', 'name email role');
     
     if (!user) {
       return res.status(404).json({
@@ -39,6 +51,17 @@ exports.getUser = async (req, res) => {
         message: 'User not found',
       });
     }
+    
+    // Check ownership: Admin can only view users they created
+    if (req.user.role === 'admin') {
+      if (!user.createdBy || user.createdBy._id.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view users you created.',
+        });
+      }
+    }
+    // Superadmin can view all users
     
     res.status(200).json({
       success: true,
@@ -171,24 +194,49 @@ exports.createUser = async (req, res) => {
 };
 
 // @desc    Update user
-// @route   PUT /api/v1/users/:id
-// @access  Public
+// @route   PUT /api/users/:id
+// @access  Private (Admin can update only their created users, SuperAdmin can update all)
 exports.updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    // Find the user to check ownership
+    const userToUpdate = await User.findById(req.params.id);
     
-    if (!user) {
+    if (!userToUpdate) {
       return res.status(404).json({
         success: false,
         message: 'User not found',
       });
     }
     
+    // Check ownership: Only allow if user is superadmin OR if user created this account
+    if (req.user.role !== 'superadmin') {
+      if (!userToUpdate.createdBy || userToUpdate.createdBy.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only update users you created.',
+        });
+      }
+    }
+    
+    // Prevent changing certain fields
+    const protectedFields = ['role', 'createdBy'];
+    if (req.user.role !== 'superadmin') {
+      protectedFields.forEach(field => {
+        if (req.body[field]) {
+          delete req.body[field];
+        }
+      });
+    }
+    
+    // Update user
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    }).select('-password');
+    
     res.status(200).json({
       success: true,
+      message: 'User updated successfully',
       data: user,
     });
   } catch (error) {
@@ -200,21 +248,44 @@ exports.updateUser = async (req, res) => {
 };
 
 // @desc    Delete user
-// @route   DELETE /api/v1/users/:id
-// @access  Public
+// @route   DELETE /api/users/:id
+// @access  Private (Admin can delete only their created users, SuperAdmin can delete all)
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    // Find the user to check ownership
+    const userToDelete = await User.findById(req.params.id);
     
-    if (!user) {
+    if (!userToDelete) {
       return res.status(404).json({
         success: false,
         message: 'User not found',
       });
     }
     
+    // Prevent deleting superadmin accounts
+    if (userToDelete.role === 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot delete superadmin accounts',
+      });
+    }
+    
+    // Check ownership: Only allow if user is superadmin OR if user created this account
+    if (req.user.role !== 'superadmin') {
+      if (!userToDelete.createdBy || userToDelete.createdBy.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only delete users you created.',
+        });
+      }
+    }
+    
+    // Delete user
+    await User.findByIdAndDelete(req.params.id);
+    
     res.status(200).json({
       success: true,
+      message: 'User deleted successfully',
       data: {},
     });
   } catch (error) {
