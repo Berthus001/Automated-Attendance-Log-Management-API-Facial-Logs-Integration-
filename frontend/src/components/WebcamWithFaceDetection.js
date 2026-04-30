@@ -71,13 +71,16 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
 
     // Cleanup on unmount
     return () => {
+      // Copy ref value to variable for cleanup
+      const video = videoRef.current;
+      
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
       // Stop camera tracks
-      if (videoRef.current?.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
+      if (video?.srcObject) {
+        const tracks = video.srcObject.getTracks();
         tracks.forEach(track => track.stop());
       }
     };
