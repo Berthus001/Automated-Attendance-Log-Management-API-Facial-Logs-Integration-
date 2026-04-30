@@ -7,6 +7,7 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
   const canvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
   const detectionIntervalRef = useRef(null);
+  const streamRef = useRef(null);
   
   // Separate state management
   const [stream, setStream] = useState(null);
@@ -24,6 +25,7 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
+      streamRef.current = null;
       setIsCameraReady(false);
     }
   }, [stream]);
@@ -69,19 +71,16 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
 
     initializeComponent();
 
-    // Cleanup on unmount
+    // Cleanup on unmount - use refs to avoid stale closure issues
     return () => {
-      // Copy ref value to variable for cleanup
-      const video = videoRef.current;
-      
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
-      // Stop camera tracks
-      if (video?.srcObject) {
-        const tracks = video.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
+      // Stop camera tracks using ref
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,6 +132,7 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         setStream(mediaStream);
+        streamRef.current = mediaStream; // Store in ref for cleanup
         setCameraError(null);
         
         // Wait for video to be ready
