@@ -6,12 +6,18 @@ const {
   createUser,
   updateUser,
   deleteUser,
+  getStudents,
+  getTeachers,
 } = require('../controllers/userController');
 const { protect, allowRoles } = require('../middleware/auth');
 
 // Public routes - none
 
-// Protected routes
+// Protected routes - Role-specific endpoints
+router.get('/students', protect, allowRoles('superadmin', 'admin'), getStudents);
+router.get('/teachers', protect, allowRoles('superadmin', 'admin'), getTeachers);
+
+// Protected routes - General user management
 router.route('/')
   .get(protect, allowRoles('superadmin', 'admin'), getUsers)
   .post(protect, allowRoles('superadmin', 'admin'), createUser);

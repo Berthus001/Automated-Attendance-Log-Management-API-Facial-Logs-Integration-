@@ -295,3 +295,67 @@ exports.deleteUser = async (req, res) => {
     });
   }
 };
+
+// @desc    Get all students
+// @route   GET /api/users/students
+// @access  Private (Admin/SuperAdmin)
+exports.getStudents = async (req, res) => {
+  try {
+    let query = { role: 'student' };
+    
+    // Admin can only see students they created
+    if (req.user.role === 'admin') {
+      query.createdBy = req.user._id;
+    }
+    // Superadmin can see all students
+    
+    const students = await User.find(query)
+      .select('-password -faceDescriptor')
+      .populate('createdBy', 'name email role')
+      .sort({ createdAt: -1 });
+    
+    res.status(200).json({
+      success: true,
+      count: students.length,
+      role: 'student',
+      data: students,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Get all teachers
+// @route   GET /api/users/teachers
+// @access  Private (Admin/SuperAdmin)
+exports.getTeachers = async (req, res) => {
+  try {
+    let query = { role: 'teacher' };
+    
+    // Admin can only see teachers they created
+    if (req.user.role === 'admin') {
+      query.createdBy = req.user._id;
+    }
+    // Superadmin can see all teachers
+    
+    const teachers = await User.find(query)
+      .select('-password -faceDescriptor')
+      .populate('createdBy', 'name email role')
+      .sort({ createdAt: -1 });
+    
+    res.status(200).json({
+      success: true,
+      count: teachers.length,
+      role: 'teacher',
+      data: teachers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
