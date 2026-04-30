@@ -4,14 +4,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "framework": "create-react-app",
-  "env": {
-    "REACT_APP_API_URL": "@react_app_api_url"
-  },
-  "build": {
-    "env": {
-      "REACT_APP_API_URL": "@react_app_api_url"
-    }
-  },
   "github": {
     "silent": true,
     "autoAlias": true
