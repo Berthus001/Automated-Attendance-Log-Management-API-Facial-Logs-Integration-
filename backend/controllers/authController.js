@@ -1,4 +1,5 @@
 const User = require('../models/User.model');
+const LoginLog = require('../models/LoginLog.model');
 const jwt = require('jsonwebtoken');
 const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
 
@@ -65,6 +66,20 @@ exports.login = async (req, res) => {
         expiresIn: process.env.JWT_EXPIRE || '7d',
       }
     );
+
+    // Log the login
+    try {
+      await LoginLog.create({
+        userId: user._id,
+        role: user.role,
+        loginTime: new Date(),
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('user-agent'),
+      });
+    } catch (logError) {
+      console.error('Failed to create login log:', logError.message);
+      // Don't fail the login if logging fails
+    }
 
     // Return success response with token
     res.status(200).json({

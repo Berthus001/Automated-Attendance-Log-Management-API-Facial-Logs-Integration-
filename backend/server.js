@@ -70,6 +70,7 @@ app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/enroll', require('./routes/enrollRoutes'));
 app.use('/api/face-login', require('./routes/faceLoginRoutes'));
 app.use('/api/logs', require('./routes/logsRoutes'));
+app.use('/api/login-logs', require('./routes/loginLogsRoutes'));
 app.use('/api/device-sync', require('./routes/deviceSyncRoutes'));
 
 // 404 handler - must be after all routes
