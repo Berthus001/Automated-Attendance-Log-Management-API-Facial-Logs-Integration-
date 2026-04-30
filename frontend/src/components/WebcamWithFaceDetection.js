@@ -17,8 +17,9 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
   const [faceDetected, setFaceDetected] = useState(false);
   const [detectionCount, setDetectionCount] = useState(0);
   const [isInitializing, setIsInitializing] = useState(true);
+  const hasInitializedRef = useRef(false);
 
-  // Stop camera and release resources
+  // Stop camera and release resources - use ref to access stream
   const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
@@ -60,16 +61,28 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     setIsInitializing(false);
   }, []);
 
-  // Initialize on component mount: Camera first, then models
+  // Initialize on component mount: Camera first, then models (ONLY ONCE)
   useEffect(() => {
+    // Prevent re-initialization
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     initializeComponent();
 
     // Cleanup on unmount
     return () => {
-      stopDetection();
-      stopCamera();
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
+      }
+      // Stop camera tracks
+      if (videoRef.current?.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
     };
-  }, [initializeComponent, stopDetection, stopCamera]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty array - run ONLY on mount
 
   // Step 1: Check for available video input devices
   const checkCameraAvailability = async () => {
