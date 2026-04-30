@@ -54,6 +54,29 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Check if user is already logged in
+    const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
+    const now = new Date();
+    
+    if (user.isLoggedIn) {
+      // Check if last login was more than 1 hour ago (stale session)
+      if (user.lastLoginAt && (now - new Date(user.lastLoginAt)) > SESSION_TIMEOUT) {
+        // Session is stale, allow re-login
+        user.isLoggedIn = false;
+      } else {
+        // Active session exists
+        return res.status(409).json({
+          success: false,
+          message: 'User already logged in from another session',
+        });
+      }
+    }
+
+    // Update login state
+    user.isLoggedIn = true;
+    user.lastLoginAt = now;
+    await user.save();
+
     // Generate JWT token
     const token = jwt.sign(
       {
@@ -390,6 +413,43 @@ exports.faceLogin = async (req, res) => {
       });
     }
 
+    // Check if user is already logged in
+    const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
+    const now = new Date();
+    
+    if (matchedUser.isLoggedIn) {
+      // Check if last login was more than 1 hour ago (stale session)
+      if (matchedUser.lastLoginAt && (now - new Date(matchedUser.lastLoginAt)) > SESSION_TIMEOUT) {
+        // Session is stale, allow re-login
+        matchedUser.isLoggedIn = false;
+      } else {
+        // Active session exists
+        return res.status(409).json({
+          success: false,
+          message: 'User already logged in from another session',
+        });
+      }
+    }
+
+    // Update login state
+    matchedUser.isLoggedIn = true;
+    matchedUser.lastLoginAt = now;
+    await matchedUser.save();
+
+    // Log the login
+    try {
+      await LoginLog.create({
+        userId: matchedUser._id,
+        role: matchedUser.role,
+        loginTime: now,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('user-agent'),
+      });
+    } catch (logError) {
+      console.error('Failed to create login log:', logError.message);
+      // Don't fail the login if logging fails
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       {
@@ -426,3 +486,54 @@ exports.faceLogin = async (req, res) => {
     });
   }
 };
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = async (req, res) => {
+  try {
+    // Find user by ID from JWT token (set by protect middleware)
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Update logout state
+    user.isLoggedIn = false;
+    await user.save();
+
+    // Update login log with logout time
+    try {
+      await LoginLog.findOneAndUpdate(
+        { 
+          userId: user._id,
+          logoutTime: null // Find the latest login without logout
+        },
+        { 
+          logoutTime: new Date() 
+        },
+        { 
+          sort: { loginTime: -1 } // Get the most recent login
+        }
+      );
+    } catch (logError) {
+      console.error('Failed to update logout time:', logError.message);
+      // Don't fail the logout if log update fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

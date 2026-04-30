@@ -1,5 +1,5 @@
 const express = require('express');
-const { login, getMe, enrollFace, faceVerify, faceLogin } = require('../controllers/authController');
+const { login, getMe, enrollFace, faceVerify, faceLogin, logout } = require('../controllers/authController');
 const { protect, allowRoles } = require('../middleware/auth');
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.post('/face-login', faceLogin); // Face-only login (student/teacher only)
 
 // Protected routes
 router.get('/me', protect, getMe);
+router.post('/logout', protect, logout); // Logout (all roles)
 router.post('/enroll-face', protect, allowRoles('superadmin', 'admin'), enrollFace);
 router.post('/face-verify', protect, faceVerify); // 2FA for admin/superadmin
 
