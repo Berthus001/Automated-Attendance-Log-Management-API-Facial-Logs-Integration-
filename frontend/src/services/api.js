@@ -75,6 +75,21 @@ export const verifyFace2FA = async (verifyData) => {
 };
 
 /**
+ * Enroll or update the logged-in admin's face for 2FA
+ * @param {Object} enrollData - { image: base64 string }
+ * @returns {Promise} Response with updated user data
+ */
+export const enrollFace2FA = async (enrollData) => {
+  try {
+    const response = await api.post('/auth/enroll-face', enrollData);
+    return response.data;
+  } catch (error) {
+    console.error('Face enrollment error:', error);
+    throw error;
+  }
+};
+
+/**
  * Get current user info
  * @returns {Promise} Response with user data
  */

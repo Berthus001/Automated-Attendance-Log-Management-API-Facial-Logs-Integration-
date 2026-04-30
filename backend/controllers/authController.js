@@ -75,10 +75,80 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        hasFaceEnrolled: Array.isArray(user.faceDescriptor) && user.faceDescriptor.length > 0,
       },
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Enroll or update current user's face descriptor
+// @route   POST /api/auth/enroll-face
+// @access  Private
+exports.enrollFace = async (req, res) => {
+  try {
+    const { image } = req.body;
+
+    if (!image) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a base64 image for face enrollment',
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    let faceResult;
+    try {
+      faceResult = await extractFaceDescriptorFromBase64(image);
+
+      if (!faceResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: faceResult.message,
+          error: faceResult.error,
+          faceCount: faceResult.faceCount,
+        });
+      }
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to extract face descriptor from image',
+        error: error.message,
+      });
+    }
+
+    user.faceDescriptor = faceResult.descriptor;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Face enrolled successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        hasFaceEnrolled: true,
+      },
+      faceDetection: {
+        confidence: faceResult.confidence,
+        boundingBox: faceResult.boundingBox,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -90,11 +160,18 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
 
     res.status(200).json({
       success: true,
-      data: user,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        hasFaceEnrolled: Array.isArray(user.faceDescriptor) && user.faceDescriptor.length > 0,
+      },
     });
   } catch (error) {
     res.status(500).json({

@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema(
       enum: ['superadmin', 'admin', 'teacher', 'student'],
       default: 'student',
     },
+    department: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     faceDescriptor: {
       type: [Number],
       default: [],

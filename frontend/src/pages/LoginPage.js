@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { adminLogin, faceOnlyLogin, verifyFace2FA } from '../services/api';
+import { adminLogin, enrollFace2FA, faceOnlyLogin, verifyFace2FA } from '../services/api';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -24,6 +24,8 @@ const LoginPage = () => {
   const [result, setResult] = useState(null);
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [showFace2FA, setShowFace2FA] = useState(false);
+
+  const hasFaceEnrolled = Boolean(loggedInUser?.hasFaceEnrolled);
 
   // Handle tab switch
   const handleTabChange = (tab) => {
@@ -67,19 +69,52 @@ const LoginPage = () => {
         localStorage.setItem('user', JSON.stringify(response.user));
         
         setLoggedInUser(response.user);
+        setShowFace2FA(true);
         setResult({
           success: true,
-          message: `Welcome back, ${response.user.name}! Redirecting to dashboard...`,
+          message: response.user.hasFaceEnrolled
+            ? `Welcome back, ${response.user.name}. Complete face verification to continue.`
+            : `Welcome back, ${response.user.name}. Enroll your face to enable 2FA.`,
           user: response.user
         });
-
-        // Redirect to dashboard after 1 second
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1000);
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      setResult({
+        success: false,
+        message: errorMessage
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFaceEnrollment = async () => {
+    if (!capturedImage) {
+      setResult({
+        success: false,
+        message: 'Please capture your face for enrollment'
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await enrollFace2FA({ image: capturedImage });
+
+      if (response.success) {
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setLoggedInUser(response.user);
+        setCapturedImage(null);
+        setResult({
+          success: true,
+          message: 'Face enrolled successfully. Verify once to complete login.',
+          user: response.user
+        });
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Face enrollment failed.';
       setResult({
         success: false,
         message: errorMessage
@@ -108,8 +143,12 @@ const LoginPage = () => {
         setResult({
           success: true,
           message: '✓ Face verified! Full access granted.',
-          verified: true
+          verified: true,
+          user: loggedInUser
         });
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 800);
       } else {
         setResult({
           success: false,
@@ -313,8 +352,12 @@ const LoginPage = () => {
                   {showFace2FA && !result?.verified && (
                     <>
                       <div className="section-header">
-                        <h3>Face Verification (2FA)</h3>
-                        <p>Verify your identity for enhanced security</p>
+                        <h3>{hasFaceEnrolled ? 'Face Verification (2FA)' : 'Face Enrollment'}</h3>
+                        <p>
+                          {hasFaceEnrolled
+                            ? 'Verify your identity to finish signing in'
+                            : 'Capture a clear face photo to enable face-based 2FA'}
+                        </p>
                       </div>
 
                       <WebcamWithFaceDetection
@@ -325,16 +368,18 @@ const LoginPage = () => {
                       <div className="login-actions">
                         {capturedImage && (
                           <button
-                            onClick={handleFace2FAVerification}
+                            onClick={hasFaceEnrolled ? handleFace2FAVerification : handleFaceEnrollment}
                             disabled={loading}
                             className="btn btn-login"
                           >
-                            {loading ? '⏳ Verifying...' : '✓ Verify Face'}
+                            {loading
+                              ? (hasFaceEnrolled ? '⏳ Verifying...' : '⏳ Enrolling...')
+                              : (hasFaceEnrolled ? '✓ Verify Face' : '📸 Enroll Face')}
                           </button>
                         )}
                         
                         <button onClick={handleLogout} className="btn btn-secondary">
-                          Skip for Now
+                          {hasFaceEnrolled ? 'Cancel' : 'Do This Later'}
                         </button>
                       </div>
                     </>
@@ -345,7 +390,7 @@ const LoginPage = () => {
                       <h3>✓ Logged In Successfully</h3>
                       <p>Welcome, {loggedInUser.name}!</p>
                       <button onClick={() => setShowFace2FA(true)} className="btn btn-secondary">
-                        Enable Face 2FA
+                        {hasFaceEnrolled ? 'Verify Face' : 'Enroll Face 2FA'}
                       </button>
                       <button onClick={handleLogout} className="btn btn-logout">
                         Logout

@@ -1,0 +1,63 @@
+# Render Blueprint for Backend Deployment
+# This file allows you to deploy with "Infrastructure as Code"
+# Optional: You can also configure manually through Render dashboard
+
+services:
+  # Backend API Service
+  - type: web
+    name: attendance-api
+    env: node
+    region: singapore  # Change to your preferred region (oregon, frankfurt, singapore, etc.)
+    plan: free  # Options: free, starter, standard, pro
+    branch: main  # Change if using different branch
+    buildCommand: npm install
+    startCommand: node server.js
+    rootDir: backend
+    healthCheckPath: /
+    
+    # Environment Variables
+    # IMPORTANT: Sensitive values should be added via Render Dashboard, not here
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: PORT
+        value: 5000
+      
+      - key: JWT_EXPIRE
+        value: 7d
+      
+      # These should be added as "secret" in Render Dashboard:
+      # - MONGO_URI (your MongoDB Atlas connection string)
+      # - JWT_SECRET (generate strong 32+ character random string)
+      # - FRONTEND_URL (your Vercel frontend URL after deployment)
+      
+      # To add secrets via Dashboard:
+      # 1. Go to your service → Environment
+      # 2. Add environment variables
+      # 3. Mark sensitive ones as "secret"
+
+# Alternative: Add secrets here (not recommended for public repos)
+# envVars:
+#   - key: MONGO_URI
+#     sync: false  # Set to false for secrets
+#   - key: JWT_SECRET
+#     sync: false
+#   - key: FRONTEND_URL
+#     sync: false
+
+# To deploy using this file:
+# 1. Push this file to your GitHub repository
+# 2. Go to Render Dashboard → "New" → "Blueprint"
+# 3. Connect your repository
+# 4. Render will read this file and create the service
+# 5. Add sensitive environment variables in Dashboard
+
+# Benefits of using render.yaml:
+# - Reproducible deployments
+# - Version controlled infrastructure
+# - Easy to update settings
+# - Team members can deploy with same config
+# - Can define multiple services (databases, cron jobs, etc.)
+
+# For more options, see: https://render.com/docs/blueprint-spec
