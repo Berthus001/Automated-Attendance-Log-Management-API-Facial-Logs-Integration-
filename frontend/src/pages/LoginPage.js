@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { adminLogin, enrollFace2FA, faceOnlyLogin, verifyFace2FA, logout } from '../services/api';
+import { adminLogin, enrollFace2FA, faceOnlyLogin, verifyFace2FA } from '../services/api';
 import './LoginPage.css';
 
 const LoginPage = () => {
