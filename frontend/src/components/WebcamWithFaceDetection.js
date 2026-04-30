@@ -203,28 +203,8 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     }
   };
 
-  // Start real-time face detection
-  const startDetection = useCallback(() => {
-    if (detectionIntervalRef.current) return;
-
-    console.log('Starting face detection...');
-    
-    detectionIntervalRef.current = setInterval(async () => {
-      await detectFaces();
-    }, 100); // Detect every 100ms
-  }, [isModelLoaded]);
-
-  // Start detection when both camera and models are ready
-  useEffect(() => {
-    if (isCameraReady && isModelLoaded && videoRef.current && !capturedImage) {
-      startDetection();
-    } else {
-      stopDetection();
-    }
-  }, [isCameraReady, isModelLoaded, capturedImage, startDetection, stopDetection]);
-
   // Detect faces in real-time and draw bounding boxes
-  const detectFaces = async () => {
+  const detectFaces = useCallback(async () => {
     if (!videoRef.current || !overlayCanvasRef.current || !isModelLoaded) return;
 
     const video = videoRef.current;
@@ -318,7 +298,27 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     } catch (err) {
       console.error('Face detection error:', err);
     }
-  };
+  }, [isModelLoaded]);
+
+  // Start real-time face detection
+  const startDetection = useCallback(() => {
+    if (detectionIntervalRef.current) return;
+
+    console.log('Starting face detection...');
+    
+    detectionIntervalRef.current = setInterval(async () => {
+      await detectFaces();
+    }, 100); // Detect every 100ms
+  }, [detectFaces]);
+
+  // Start detection when both camera and models are ready
+  useEffect(() => {
+    if (isCameraReady && isModelLoaded && videoRef.current && !capturedImage) {
+      startDetection();
+    } else {
+      stopDetection();
+    }
+  }, [isCameraReady, isModelLoaded, capturedImage, startDetection, stopDetection]);
 
   // Capture frame from video and convert to base64 JPEG
   const captureImage = () => {
