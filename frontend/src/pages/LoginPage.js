@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { adminLogin, enrollFace2FA, faceOnlyLogin, verifyFace2FA } from '../services/api';
+import { adminLogin, enrollFace2FA, faceOnlyLogin, verifyFace2FA, logout } from '../services/api';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -25,6 +25,10 @@ const LoginPage = () => {
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [showFace2FA, setShowFace2FA] = useState(false);
 
+  // Modal state for "already logged in" scenario
+  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
+  const [pendingLoginData, setPendingLoginData] = useState(null);
+
   const hasFaceEnrolled = Boolean(loggedInUser?.hasFaceEnrolled);
 
   // Handle tab switch
@@ -35,6 +39,105 @@ const LoginPage = () => {
     setCapturedImage(null);
     setAdminForm({ email: '', password: '' });
     setShowFace2FA(false);
+    setShowAlreadyLoggedInModal(false);
+    setPendingLoginData(null);
+  };
+
+  // Handle "Logout Previous Session" button click
+  const handleForceLogout = async () => {
+    setLoading(true);
+    
+    try {
+      // Call logout endpoint (will clear the isLoggedIn flag)
+      await logout();
+      
+      // Close modal
+      setShowAlreadyLoggedInModal(false);
+      
+      // Retry the login with saved data
+      if (pendingLoginData) {
+        if (pendingLoginData.type === 'admin') {
+          // Retry admin login
+          await retryAdminLogin(pendingLoginData.credentials);
+        } else if (pendingLoginData.type === 'face') {
+          // Retry face login
+          await retryFaceLogin(pendingLoginData.credentials);
+        }
+      }
+    } catch (error) {
+      setResult({
+        success: false,
+        message: 'Failed to logout previous session. Please try again.'
+      });
+      setShowAlreadyLoggedInModal(false);
+    } finally {
+      setLoading(false);
+      setPendingLoginData(null);
+    }
+  };
+
+  // Retry admin login after force logout
+  const retryAdminLogin = async (credentials) => {
+    try {
+      const response = await adminLogin(credentials);
+
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        setLoggedInUser(response.user);
+        setShowFace2FA(true);
+        setResult({
+          success: true,
+          message: response.user.hasFaceEnrolled
+            ? `Welcome back, ${response.user.name}. Complete face verification to continue.`
+            : `Welcome back, ${response.user.name}. Enroll your face to enable 2FA.`,
+          user: response.user
+        });
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Login failed after logout.';
+      setResult({
+        success: false,
+        message: errorMessage
+      });
+    }
+  };
+
+  // Retry face login after force logout
+  const retryFaceLogin = async (credentials) => {
+    try {
+      const response = await faceOnlyLogin(credentials);
+
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        setResult({
+          success: true,
+          message: `Welcome, ${response.user.name}! 🎉`,
+          user: response.user,
+          confidence: response.confidence
+        });
+
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Face login failed after logout.';
+      setResult({
+        success: false,
+        message: errorMessage
+      });
+    }
+  };
+
+  // Handle "Cancel" button click in modal
+  const handleCancelForceLogout = () => {
+    setShowAlreadyLoggedInModal(false);
+    setPendingLoginData(null);
+    setLoading(false);
   };
 
   // Handle admin form input
@@ -79,11 +182,21 @@ const LoginPage = () => {
         });
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      setResult({
-        success: false,
-        message: errorMessage
-      });
+      // Check for 409 status (already logged in)
+      if (error.response?.status === 409) {
+        // Show modal and save login data for retry
+        setPendingLoginData({
+          type: 'admin',
+          credentials: adminForm
+        });
+        setShowAlreadyLoggedInModal(true);
+      } else {
+        const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+        setResult({
+          success: false,
+          message: errorMessage
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -194,13 +307,27 @@ const LoginPage = () => {
           user: response.user,
           confidence: response.confidence
         });
+
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Face not recognized. Please try again.';
-      setResult({
-        success: false,
-        message: errorMessage
-      });
+      // Check for 409 status (already logged in)
+      if (error.response?.status === 409) {
+        // Show modal and save login data for retry
+        setPendingLoginData({
+          type: 'face',
+          credentials: { image: capturedImage }
+        });
+        setShowAlreadyLoggedInModal(true);
+      } else {
+        const errorMessage = error.response?.data?.message || 'Face not recognized. Please try again.';
+        setResult({
+          success: false,
+          message: errorMessage
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -436,6 +563,37 @@ const LoginPage = () => {
             </div>
           )}
         </div>
+
+        {/* "Already Logged In" Modal */}
+        {showAlreadyLoggedInModal && (
+          <div className="modal-overlay">
+            <div className="modal-container">
+              <div className="modal-header">
+                <h3>⚠️ Already Logged In</h3>
+              </div>
+              <div className="modal-body">
+                <p>This account is already logged in on another session.</p>
+                <p>Would you like to logout from the previous session and login here?</p>
+              </div>
+              <div className="modal-actions">
+                <button
+                  onClick={handleForceLogout}
+                  disabled={loading}
+                  className="btn btn-logout-previous"
+                >
+                  {loading ? '⏳ Logging out...' : '🔓 Logout Previous Session'}
+                </button>
+                <button
+                  onClick={handleCancelForceLogout}
+                  disabled={loading}
+                  className="btn btn-cancel"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
     </div>

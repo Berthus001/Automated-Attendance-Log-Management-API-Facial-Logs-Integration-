@@ -103,6 +103,36 @@ export const getCurrentUser = async () => {
   }
 };
 
+/**
+ * Logout current user
+ * @returns {Promise} Response with logout confirmation
+ */
+export const logout = async () => {
+  try {
+    const response = await api.post('/auth/logout');
+    return response.data;
+  } catch (error) {
+    console.error('Logout error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Force logout (used when user is already logged in)
+ * @param {Object} credentials - { email, password } for admin or { image } for face login
+ * @returns {Promise} Response with logout confirmation
+ */
+export const forceLogout = async (credentials) => {
+  try {
+    // First, attempt to logout with provided credentials
+    const response = await api.post('/auth/logout', credentials);
+    return response.data;
+  } catch (error) {
+    console.error('Force logout error:', error);
+    throw error;
+  }
+};
+
 // ========== USER MANAGEMENT ==========
 
 /**
