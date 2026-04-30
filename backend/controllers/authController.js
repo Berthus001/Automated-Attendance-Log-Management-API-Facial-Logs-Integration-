@@ -54,11 +54,14 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Check for force login parameter
+    const forceLogin = req.body.forceLogin === true;
+
     // Check if user is already logged in
     const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours (1 day) in milliseconds
     const now = new Date();
     
-    if (user.isLoggedIn) {
+    if (user.isLoggedIn && !forceLogin) {
       // Check if last login was more than 24 hours ago (stale session)
       if (user.lastLoginAt && (now - new Date(user.lastLoginAt)) > SESSION_TIMEOUT) {
         // Session is stale, allow re-login
@@ -70,6 +73,11 @@ exports.login = async (req, res) => {
           message: 'User already logged in from another session',
         });
       }
+    }
+
+    // If forceLogin is true, clear previous session
+    if (forceLogin && user.isLoggedIn) {
+      user.isLoggedIn = false;
     }
 
     // Update login state
@@ -413,11 +421,14 @@ exports.faceLogin = async (req, res) => {
       });
     }
 
+    // Check for force login parameter
+    const forceLogin = req.body.forceLogin === true;
+
     // Check if user is already logged in
     const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours (1 day) in milliseconds
     const now = new Date();
     
-    if (matchedUser.isLoggedIn) {
+    if (matchedUser.isLoggedIn && !forceLogin) {
       // Check if last login was more than 24 hours ago (stale session)
       if (matchedUser.lastLoginAt && (now - new Date(matchedUser.lastLoginAt)) > SESSION_TIMEOUT) {
         // Session is stale, allow re-login
@@ -429,6 +440,11 @@ exports.faceLogin = async (req, res) => {
           message: 'User already logged in from another session',
         });
       }
+    }
+
+    // If forceLogin is true, clear previous session
+    if (forceLogin && matchedUser.isLoggedIn) {
+      matchedUser.isLoggedIn = false;
     }
 
     // Update login state

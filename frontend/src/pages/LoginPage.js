@@ -48,20 +48,17 @@ const LoginPage = () => {
     setLoading(true);
     
     try {
-      // Call logout endpoint (will clear the isLoggedIn flag)
-      await logout();
-      
       // Close modal
       setShowAlreadyLoggedInModal(false);
       
-      // Retry the login with saved data
+      // Retry the login with saved data and forceLogin flag
       if (pendingLoginData) {
         if (pendingLoginData.type === 'admin') {
-          // Retry admin login
-          await retryAdminLogin(pendingLoginData.credentials);
+          // Retry admin login with forceLogin flag
+          await retryAdminLogin({ ...pendingLoginData.credentials, forceLogin: true });
         } else if (pendingLoginData.type === 'face') {
-          // Retry face login
-          await retryFaceLogin(pendingLoginData.credentials);
+          // Retry face login with forceLogin flag
+          await retryFaceLogin({ ...pendingLoginData.credentials, forceLogin: true });
         }
       }
     } catch (error) {
@@ -69,7 +66,6 @@ const LoginPage = () => {
         success: false,
         message: 'Failed to logout previous session. Please try again.'
       });
-      setShowAlreadyLoggedInModal(false);
     } finally {
       setLoading(false);
       setPendingLoginData(null);
