@@ -55,11 +55,11 @@ exports.login = async (req, res) => {
     }
 
     // Check if user is already logged in
-    const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
+    const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours (1 day) in milliseconds
     const now = new Date();
     
     if (user.isLoggedIn) {
-      // Check if last login was more than 1 hour ago (stale session)
+      // Check if last login was more than 24 hours ago (stale session)
       if (user.lastLoginAt && (now - new Date(user.lastLoginAt)) > SESSION_TIMEOUT) {
         // Session is stale, allow re-login
         user.isLoggedIn = false;
@@ -414,11 +414,11 @@ exports.faceLogin = async (req, res) => {
     }
 
     // Check if user is already logged in
-    const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
+    const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours (1 day) in milliseconds
     const now = new Date();
     
     if (matchedUser.isLoggedIn) {
-      // Check if last login was more than 1 hour ago (stale session)
+      // Check if last login was more than 24 hours ago (stale session)
       if (matchedUser.lastLoginAt && (now - new Date(matchedUser.lastLoginAt)) > SESSION_TIMEOUT) {
         // Session is stale, allow re-login
         matchedUser.isLoggedIn = false;
