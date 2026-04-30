@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
@@ -65,22 +65,7 @@ const SuperAdminDashboard = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/');
-      return;
-    }
-    loadCurrentUser();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (currentUser) {
-      loadUsers();
-    }
-  }, [currentUser]);
-
-  const loadCurrentUser = async () => {
+  const loadCurrentUser = useCallback(async () => {
     try {
       const response = await getCurrentUser();
       if (response.success && response.user) {
@@ -98,7 +83,23 @@ const SuperAdminDashboard = () => {
         navigate('/');
       }, 2000);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/');
+      return;
+    }
+    loadCurrentUser();
+  }, [navigate, loadCurrentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUsers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   const loadUsers = async () => {
     try {

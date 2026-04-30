@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import './WebcamWithFaceDetection.css';
 
@@ -18,28 +18,25 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
   const [detectionCount, setDetectionCount] = useState(0);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Initialize on component mount: Camera first, then models
-  useEffect(() => {
-    initializeComponent();
+  // Stop camera and release resources
+  const stopCamera = useCallback(() => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setIsCameraReady(false);
+    }
+  }, [stream]);
 
-    // Cleanup on unmount
-    return () => {
-      stopDetection();
-      stopCamera();
-    };
+  // Stop face detection
+  const stopDetection = useCallback(() => {
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
   }, []);
 
-  // Start detection when both camera and models are ready
-  useEffect(() => {
-    if (isCameraReady && isModelLoaded && videoRef.current && !capturedImage) {
-      startDetection();
-    } else {
-      stopDetection();
-    }
-  }, [isCameraReady, isModelLoaded, capturedImage]);
-
   // Main initialization flow
-  const initializeComponent = async () => {
+  const initializeComponent = useCallback(async () => {
     setIsInitializing(true);
     setCameraError(null);
     setModelError(null);
@@ -61,7 +58,18 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     // Step 3: Load face detection models (only if camera works)
     await loadModels();
     setIsInitializing(false);
-  };
+  }, []);
+
+  // Initialize on component mount: Camera first, then models
+  useEffect(() => {
+    initializeComponent();
+
+    // Cleanup on unmount
+    return () => {
+      stopDetection();
+      stopCamera();
+    };
+  }, [initializeComponent, stopDetection, stopCamera]);
 
   // Step 1: Check for available video input devices
   const checkCameraAvailability = async () => {
@@ -195,17 +203,8 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     }
   };
 
-  // Stop camera and release resources
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-      setIsCameraReady(false);
-    }
-  };
-
   // Start real-time face detection
-  const startDetection = () => {
+  const startDetection = useCallback(() => {
     if (detectionIntervalRef.current) return;
 
     console.log('Starting face detection...');
@@ -213,15 +212,16 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     detectionIntervalRef.current = setInterval(async () => {
       await detectFaces();
     }, 100); // Detect every 100ms
-  };
+  }, [isModelLoaded]);
 
-  // Stop face detection
-  const stopDetection = () => {
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
+  // Start detection when both camera and models are ready
+  useEffect(() => {
+    if (isCameraReady && isModelLoaded && videoRef.current && !capturedImage) {
+      startDetection();
+    } else {
+      stopDetection();
     }
-  };
+  }, [isCameraReady, isModelLoaded, capturedImage, startDetection, stopDetection]);
 
   // Detect faces in real-time and draw bounding boxes
   const detectFaces = async () => {
