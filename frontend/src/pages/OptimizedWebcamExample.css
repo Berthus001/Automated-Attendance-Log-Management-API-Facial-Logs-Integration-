@@ -1,0 +1,214 @@
+.optimized-webcam-example {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.example-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px;
+}
+
+.example-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2em;
+}
+
+.example-header p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.features-info {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border-left: 4px solid #007bff;
+}
+
+.features-info h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.features-info ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.features-info li {
+  margin: 8px 0;
+  color: #555;
+}
+
+.webcam-section {
+  margin: 30px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.action-section {
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  margin: 30px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.action-section h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.btn-send-api,
+.btn-download {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-send-api {
+  background: #28a745;
+  color: white;
+}
+
+.btn-send-api:hover {
+  background: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-download {
+  background: #007bff;
+  color: white;
+}
+
+.btn-download:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.code-example {
+  background: #282c34;
+  color: #abb2bf;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  overflow-x: auto;
+}
+
+.code-example h4 {
+  margin-top: 0;
+  color: #61dafb;
+}
+
+.code-example pre {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.technical-details {
+  margin: 30px 0;
+}
+
+.technical-details h3 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.detail-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-top: 3px solid #007bff;
+}
+
+.detail-card h4 {
+  margin-top: 0;
+  color: #007bff;
+}
+
+.detail-card p {
+  margin: 8px 0;
+  color: #666;
+}
+
+.console-info {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 30px 0;
+}
+
+.console-info h4 {
+  margin-top: 0;
+  color: #856404;
+}
+
+.console-info p {
+  margin: 10px 0;
+  color: #856404;
+}
+
+.console-info ul {
+  margin: 10px 0;
+  padding-left: 25px;
+}
+
+.console-info li {
+  color: #856404;
+  margin: 5px 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .optimized-webcam-example {
+    padding: 15px;
+  }
+
+  .example-header h1 {
+    font-size: 1.5em;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-send-api,
+  .btn-download {
+    width: 100%;
+  }
+}

@@ -336,27 +336,75 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     }
   }, [isCameraReady, isModelLoaded, capturedImage, startDetection, stopDetection]);
 
-  // Capture frame from video and convert to base64 JPEG
+  // Helper function to calculate base64 size in KB
+  const getBase64SizeInKB = (base64String) => {
+    // Remove data:image/jpeg;base64, prefix if present
+    const base64Data = base64String.split(',')[1] || base64String;
+    // Calculate size: base64 length * 0.75 / 1024
+    const sizeInKB = (base64Data.length * 0.75) / 1024;
+    return sizeInKB.toFixed(2);
+  };
+
+  // Capture frame from video, compress, and convert to base64 JPEG
   const captureImage = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
+    console.log('📸 Capturing image from webcam...');
+
     const video = videoRef.current;
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // First, capture full resolution to temp canvas
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Get original size
+    const originalImage = tempCanvas.toDataURL('image/jpeg', 0.95);
+    const originalSize = getBase64SizeInKB(originalImage);
+    console.log(`📊 Original image size: ${originalSize} KB (${tempCanvas.width}x${tempCanvas.height})`);
+
+    // Create optimized canvas with target dimensions (320x240)
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
+    const targetWidth = 320;
+    const targetHeight = 240;
+    
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
-    // Set canvas size to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Draw and resize image to target dimensions
+    context.drawImage(video, 0, 0, targetWidth, targetHeight);
 
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Try different quality levels to get under 200KB
+    let quality = 0.7;
+    let compressedImage = canvas.toDataURL('image/jpeg', quality);
+    let sizeKB = getBase64SizeInKB(compressedImage);
 
-    // Convert canvas to base64 JPEG
-    const base64Image = canvas.toDataURL('image/jpeg', 0.95);
+    console.log(`🖼️ Initial compression (quality ${quality}): ${sizeKB} KB`);
 
-    // Return base64 string via callback
+    // If still too large, reduce quality
+    while (parseFloat(sizeKB) > 200 && quality > 0.3) {
+      quality -= 0.05;
+      compressedImage = canvas.toDataURL('image/jpeg', quality);
+      sizeKB = getBase64SizeInKB(compressedImage);
+      console.log(`🔄 Recompressing (quality ${quality.toFixed(2)}): ${sizeKB} KB`);
+    }
+
+    // Final log
+    console.log(`✅ Final image size: ${sizeKB} KB (quality: ${quality.toFixed(2)})`);
+    console.log(`📐 Final dimensions: ${targetWidth}x${targetHeight}`);
+    console.log(`💾 Size reduction: ${((1 - parseFloat(sizeKB) / parseFloat(originalSize)) * 100).toFixed(1)}%`);
+    
+    // Warn if still over 200KB
+    if (parseFloat(sizeKB) > 200) {
+      console.warn(`⚠️ Image size ${sizeKB} KB exceeds 200KB limit`);
+    }
+
+    // Return compressed image via callback
     if (onCapture) {
-      onCapture(base64Image);
+      onCapture(compressedImage);
     }
   };
 

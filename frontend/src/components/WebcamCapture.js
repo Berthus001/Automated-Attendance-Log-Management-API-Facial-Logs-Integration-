@@ -6,20 +6,85 @@ const WebcamCapture = ({ onCapture, capturedImage }) => {
   const webcamRef = useRef(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
 
-  // Video constraints
+  // Video constraints - higher initial resolution for better quality
   const videoConstraints = {
     width: 640,
     height: 480,
     facingMode: 'user'
   };
 
-  // Capture image from webcam
-  const handleCapture = useCallback(() => {
+  // Helper function to calculate base64 size in KB
+  const getBase64SizeInKB = (base64String) => {
+    // Remove data:image/jpeg;base64, prefix if present
+    const base64Data = base64String.split(',')[1] || base64String;
+    // Calculate size: base64 length * 0.75 / 1024
+    const sizeInKB = (base64Data.length * 0.75) / 1024;
+    return sizeInKB.toFixed(2);
+  };
+
+  // Optimize and compress image to under 200KB
+  const compressImage = useCallback((imageSrc) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas with target dimensions (320x240)
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set target size
+        const targetWidth = 320;
+        const targetHeight = 240;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        // Draw and resize image
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        // Try different quality levels to get under 200KB
+        let quality = 0.7;
+        let compressedImage = canvas.toDataURL('image/jpeg', quality);
+        let sizeKB = getBase64SizeInKB(compressedImage);
+
+        console.log(`🖼️ Initial compression (quality ${quality}): ${sizeKB} KB`);
+
+        // If still too large, reduce quality
+        while (parseFloat(sizeKB) > 200 && quality > 0.3) {
+          quality -= 0.05;
+          compressedImage = canvas.toDataURL('image/jpeg', quality);
+          sizeKB = getBase64SizeInKB(compressedImage);
+          console.log(`🔄 Recompressing (quality ${quality.toFixed(2)}): ${sizeKB} KB`);
+        }
+
+        // Final log
+        console.log(`✅ Final image size: ${sizeKB} KB (quality: ${quality.toFixed(2)})`);
+        console.log(`📐 Dimensions: ${targetWidth}x${targetHeight}`);
+        
+        // Warn if still over 200KB
+        if (parseFloat(sizeKB) > 200) {
+          console.warn(`⚠️ Image size ${sizeKB} KB exceeds 200KB limit`);
+        }
+
+        resolve(compressedImage);
+      };
+      img.src = imageSrc;
+    });
+  }, []);
+
+  // Capture and compress image from webcam
+  const handleCapture = useCallback(async () => {
     const imageSrc = webcamRef.current.getScreenshot();
     if (imageSrc) {
-      onCapture(imageSrc);
+      console.log('📸 Capturing image...');
+      const originalSize = getBase64SizeInKB(imageSrc);
+      console.log(`📊 Original image size: ${originalSize} KB`);
+      
+      // Compress the image
+      const compressedImage = await compressImage(imageSrc);
+      
+      // Pass compressed image to parent
+      onCapture(compressedImage);
     }
-  }, [webcamRef, onCapture]);
+  }, [webcamRef, onCapture, compressImage]);
 
   // Handle camera ready
   const handleUserMedia = () => {
