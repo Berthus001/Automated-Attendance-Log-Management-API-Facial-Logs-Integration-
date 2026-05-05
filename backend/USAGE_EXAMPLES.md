@@ -1,161 +1,180 @@
-# Image Processing Utility - Usage Examples
+# API Usage Examples
 
-## Installation
+Quick-reference curl examples for all major API operations.
 
-The `sharp` package has been installed for image processing.
+---
 
-## Usage
+## Authentication
 
-### 1. Import the Utility
-
-```javascript
-const { processBase64Image, processMultipleBase64Images } = require('./utils/imageProcessor');
-```
-
-### 2. Process Single Base64 Image
-
-```javascript
-const base64String = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
-
-const result = await processBase64Image(base64String, {
-  maxWidth: 300,      // Max width in pixels
-  quality: 70,        // JPEG quality (0-100)
-  format: 'jpeg',     // Output format
-  subfolder: 'faces', // Optional subfolder in uploads/
-});
-
-console.log(result);
-// Output:
-// {
-//   success: true,
-//   filePath: 'uploads/faces/img_1714694400000_a1b2c3d4.jpeg',
-//   absolutePath: 'C:/Users/.../backend/uploads/faces/img_1714694400000_a1b2c3d4.jpeg',
-//   filename: 'img_1714694400000_a1b2c3d4.jpeg',
-//   size: 12345,
-//   width: 300,
-//   height: 225,
-//   format: 'jpeg'
-// }
-```
-
-### 3. Process Multiple Images
-
-```javascript
-const images = [
-  'data:image/jpeg;base64,/9j/4AAQ...',
-  'data:image/png;base64,iVBORw0KGgo...',
-];
-
-const results = await processMultipleBase64Images(images, {
-  maxWidth: 300,
-  quality: 70,
-});
-
-console.log(`Processed ${results.length} images`);
-```
-
-### 4. API Endpoints
-
-#### Upload Single Image
+### Admin login (email + password)
 ```bash
-POST /api/v1/upload/image
-Content-Type: application/json
-
-{
-  "image": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
-  "subfolder": "faces"
-}
+curl -X POST https://your-api.onrender.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"SecurePass123"}'
 ```
 
-#### Upload Multiple Images
+### Force login (override active session)
 ```bash
-POST /api/v1/upload/images
-Content-Type: application/json
-
-{
-  "images": [
-    "data:image/jpeg;base64,/9j/4AAQ...",
-    "data:image/jpeg;base64,/9j/4AAQ..."
-  ],
-  "subfolder": "attendance"
-}
+curl -X POST https://your-api.onrender.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"SecurePass123","forceLogin":true}'
 ```
 
-#### Upload Face Image
+### Face login (student/teacher � also logs attendance)
 ```bash
-POST /api/v1/upload/face
-Content-Type: application/json
-
-{
-  "image": "data:image/jpeg;base64,/9j/4AAQ...",
-  "studentId": "STU001"
-}
+curl -X POST https://your-api.onrender.com/api/auth/face-login \
+  -H "Content-Type: application/json" \
+  -d '{"image":"data:image/jpeg;base64,<BASE64_DATA>","deviceId":"KIOSK_001"}'
 ```
 
-### 5. Response Format
-
-```json
-{
-  "success": true,
-  "message": "Image uploaded successfully",
-  "data": {
-    "filePath": "uploads/faces/img_1714694400000_a1b2c3d4.jpeg",
-    "filename": "img_1714694400000_a1b2c3d4.jpeg",
-    "size": 12345,
-    "width": 300,
-    "height": 225,
-    "format": "jpeg"
-  }
-}
+### Admin face 2FA verification
+```bash
+curl -X POST https://your-api.onrender.com/api/auth/face-verify \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"image":"data:image/jpeg;base64,<BASE64_DATA>"}'
 ```
 
-## Features
-
-✅ **Base64 to Image Conversion** - Handles data URIs and pure base64  
-✅ **Auto Compression** - JPEG quality 70 with mozjpeg  
-✅ **Smart Resize** - Max width 300px, maintains aspect ratio  
-✅ **No Upscaling** - Small images won't be enlarged  
-✅ **Progressive JPEG** - Better loading experience  
-✅ **Unique Filenames** - Timestamp + random hash  
-✅ **Subfolder Support** - Organize uploads by category  
-✅ **Metadata Return** - Size, dimensions, format info  
-
-## File Organization
-
-```
-/uploads
-  ├── /faces           # Face images for recognition
-  ├── /attendance      # Attendance log images
-  └── [custom folders] # Any subfolder you specify
+### Get current user
+```bash
+curl https://your-api.onrender.com/api/auth/me \
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
-## Image Processing Details
-
-- **Input**: Base64 string (with or without data URI prefix)
-- **Output Format**: JPEG (optimized)
-- **Max Width**: 300px
-- **Quality**: 70%
-- **Compression**: mozjpeg algorithm
-- **Progressive**: Yes (loads gradually)
-- **Aspect Ratio**: Preserved
-
-## Error Handling
-
-```javascript
-try {
-  const result = await processBase64Image(base64String);
-  console.log('Success:', result.filePath);
-} catch (error) {
-  console.error('Failed:', error.message);
-}
+### Logout
+```bash
+curl -X POST https://your-api.onrender.com/api/auth/logout \
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
-## Validation Helpers
+---
 
-```javascript
-const { isValidBase64Image } = require('./utils/imageHelpers');
+## User Management
 
-if (isValidBase64Image(base64String)) {
-  // Process image
-}
+### List all users
+```bash
+curl https://your-api.onrender.com/api/users \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### List students only
+```bash
+curl https://your-api.onrender.com/api/users/students \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### Create a student
+```bash
+curl -X POST https://your-api.onrender.com/api/users \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "password": "Pass123!",
+    "role": "student",
+    "department": "Computer Science",
+    "image": "data:image/jpeg;base64,<BASE64_DATA>"
+  }'
+```
+
+### Update a user
+```bash
+curl -X PUT https://your-api.onrender.com/api/users/<USER_ID> \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Jane Doe Updated","department":"IT"}'
+```
+
+### Delete a user
+```bash
+curl -X DELETE https://your-api.onrender.com/api/users/<USER_ID> \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+---
+
+## Attendance Logs
+
+### Get all logs (admin)
+```bash
+curl "https://your-api.onrender.com/api/logs?page=1&limit=20" \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### Filter logs by date and status
+```bash
+curl "https://your-api.onrender.com/api/logs?startDate=2026-05-01&endDate=2026-05-31&status=present" \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### Get own attendance (any user)
+```bash
+curl https://your-api.onrender.com/api/logs/my-attendance \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### Get attendance summary
+```bash
+curl https://your-api.onrender.com/api/logs/summary \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+---
+
+## Kiosk
+
+### Get all enrolled user descriptors
+```bash
+curl https://your-api.onrender.com/api/kiosk/descriptors
+```
+
+### Record kiosk attendance (after client-side face match)
+```bash
+curl -X POST https://your-api.onrender.com/api/kiosk/attendance \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"<USER_ID>","userName":"Jane Doe","userRole":"student","deviceId":"KIOSK_001","confidenceScore":0.85}'
+```
+
+---
+
+## Legacy Enrollment (Student Model)
+
+### Enroll student
+```bash
+curl -X POST https://your-api.onrender.com/api/enroll \
+  -H "Content-Type: application/json" \
+  -d '{"studentId":"STU001","name":"John Doe","course":"CS","image":"data:image/jpeg;base64,<DATA>"}'
+```
+
+### List enrolled students
+```bash
+curl https://your-api.onrender.com/api/enroll
+```
+
+---
+
+## Login Logs
+
+### Get all login history (admin)
+```bash
+curl https://your-api.onrender.com/api/login-logs \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### Get own login history
+```bash
+curl https://your-api.onrender.com/api/login-logs/me \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+---
+
+## Device Sync
+
+### Sync offline attendance record
+```bash
+curl -X POST https://your-api.onrender.com/api/device-sync \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"<USER_ID>","userName":"Jane Doe","userRole":"student","timestamp":"2026-05-05T08:30:00.000Z","status":"present","deviceId":"KIOSK_001"}'
 ```

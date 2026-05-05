@@ -1,174 +1,120 @@
-# Face Recognition Utility API
+# Face Recognition Technical Reference
 
-Utility functions for face recognition using face-api.js with strict validation rules.
-
-## Functions
-
-### 1. `loadModels()`
-
-Loads face-api.js models (SSD MobileNet, Face Landmarks, Face Recognition).
-
-```javascript
-const { loadModels } = require('./utils/faceDetection');
-
-await loadModels();
-```
-
-**Note:** Call this once at server startup. Models are cached after first load.
+Implementation details for the face recognition pipeline.
 
 ---
 
-### 2. `getFaceDescriptor(imagePath)`
+## Technology Stack
 
-Extracts face descriptor from an image file.
-
-**Parameters:**
-- `imagePath` (string): Path to the image file
-
-**Returns:**
-- `Array<number>`: Face descriptor (128-dimensional array)
-
-**Throws:**
-- `Error`: "No face detected in the image"
-- `Error`: "Multiple faces detected (N). Only one face allowed"
-
-**Example:**
-```javascript
-const { getFaceDescriptor } = require('./utils/faceDetection');
-
-try {
-  const descriptor = await getFaceDescriptor('./uploads/faces/user123.jpg');
-  console.log('Descriptor length:', descriptor.length); // 128
-} catch (error) {
-  console.error(error.message);
-}
-```
-
-**Rules:**
-- âœ“ Allows **exactly one face**
-- âœ— Throws error if **no face** detected
-- âœ— Throws error if **multiple faces** detected
+| Component | Library | Version |
+|---|---|---|
+| Face detection & descriptor extraction | `@vladmandic/face-api` | 1.7.15 |
+| ML backend | `@tensorflow/tfjs` + `tfjs-backend-wasm` | 4.22 |
+| Image processing | `sharp` | 0.34 |
+| Canvas support | `canvas` | 3.2 |
+| ML model files | `backend/models/face-api/` | SSD MobileNet v1 |
 
 ---
 
-### 3. `compareFaces(desc1, desc2, threshold = 0.6)`
+## Pipeline Overview
 
-Compares two face descriptors using Euclidean distance.
-
-**Parameters:**
-- `desc1` (Array<number>): First face descriptor
-- `desc2` (Array<number>): Second face descriptor  
-- `threshold` (number, optional): Match threshold (default: 0.6)
-
-**Returns:**
-```javascript
-{
-  distance: number,  // Euclidean distance (lower = more similar)
-  isMatch: boolean   // true if distance < threshold
-}
 ```
-
-**Example:**
-```javascript
-const { getFaceDescriptor, compareFaces } = require('./utils/faceDetection');
-
-// Get descriptors
-const desc1 = await getFaceDescriptor('./user1.jpg');
-const desc2 = await getFaceDescriptor('./user2.jpg');
-
-// Compare faces
-const result = compareFaces(desc1, desc2);
-
-console.log(result);
-// {
-//   distance: 0.4523,
-//   isMatch: true
-// }
-
-if (result.isMatch) {
-  console.log('Same person!');
-} else {
-  console.log('Different person!');
-}
-```
-
-**Custom Threshold:**
-```javascript
-// Stricter matching (lower threshold)
-const strict = compareFaces(desc1, desc2, 0.5);
-
-// Looser matching (higher threshold)
-const loose = compareFaces(desc1, desc2, 0.7);
-```
-
-**Distance Guidelines:**
-- `< 0.4`: Very strong match (same person, same conditions)
-- `0.4 - 0.6`: Good match (same person, different conditions)
-- `0.6 - 0.8`: Weak match (may be same person)
-- `> 0.8`: Different person
-
-**Default Threshold:** `0.6` (recommended)
-
----
-
-## Complete Usage Example
-
-```javascript
-const { loadModels, getFaceDescriptor, compareFaces } = require('./utils/faceDetection');
-
-async function authenticateUser(enrolledImagePath, loginImagePath) {
-  try {
-    // 1. Load models (once at startup)
-    await loadModels();
-    
-    // 2. Get face descriptors
-    const enrolledDescriptor = await getFaceDescriptor(enrolledImagePath);
-    const loginDescriptor = await getFaceDescriptor(loginImagePath);
-    
-    // 3. Compare faces
-    const { distance, isMatch } = compareFaces(enrolledDescriptor, loginDescriptor);
-    
-    console.log(`Distance: ${distance}`);
-    console.log(`Match: ${isMatch}`);
-    
-    return isMatch;
-  } catch (error) {
-    console.error('Authentication failed:', error.message);
-    return false;
-  }
-}
-
-// Usage
-const isAuthenticated = await authenticateUser(
-  './uploads/faces/user123.jpg',
-  './uploads/faces/login_attempt.jpg'
-);
+1. Receive base64 image string
+2. Decode base64 ? Buffer
+3. Process with Sharp:
+   - Resize to 416×416
+   - Convert to JPEG (quality 90)
+   - Normalise to RGB
+4. Create face-api canvas image
+5. Detect face with SSD MobileNet v1
+6. Extract 128-point face descriptor
+7. Compare against stored descriptors (Euclidean distance)
+8. Return best match below threshold
 ```
 
 ---
 
-## Error Handling
+## Key Utilities (`backend/utils/faceDetection.js`)
 
-```javascript
-try {
-  const descriptor = await getFaceDescriptor(imagePath);
-} catch (error) {
-  if (error.message.includes('No face detected')) {
-    // Handle: no face in image
-  } else if (error.message.includes('Multiple faces')) {
-    // Handle: multiple faces in image
-  } else {
-    // Handle: other errors
-  }
-}
+### `extractFaceDescriptor(base64Image)`
+
+Accepts a `data:image/...;base64,...` string.
+Returns a 128-element Float32Array face descriptor, or throws if no face is detected.
+
+```js
+const descriptor = await extractFaceDescriptor(imageBase64);
+// Float32Array(128) [0.0234, -0.1023, ...]
+```
+
+### `compareFaceDescriptors(descriptor1, descriptor2)`
+
+Returns the Euclidean distance between two 128-point descriptors.
+
+```js
+const distance = compareFaceDescriptors(knownDescriptor, candidateDescriptor);
+// 0.2345 ? match  |  0.7812 ? no match
+```
+
+### `findBestMatch(queryDescriptor, candidateDescriptors)`
+
+Iterates all candidates, returns the best match and its distance.
+
+```js
+const { match, distance } = findBestMatch(queryDescriptor, allUserDescriptors);
 ```
 
 ---
 
-## Technical Details
+## Face Matching Thresholds
 
-- **Algorithm:** Euclidean distance
-- **Descriptor Size:** 128 dimensions
-- **Default Threshold:** 0.6
-- **Models:** SSD MobileNetV1, Face Landmark 68, Face Recognition Net
-- **One Face Rule:** Strictly enforced (throws error otherwise)
+| Distance Range | Classification |
+|---|---|
+| `0.0 – 0.40` | Strong match (early exit, not all candidates scanned) |
+| `0.40 – 0.59` | Match |
+| `0.60+` | No match |
+
+These thresholds apply to:
+- `POST /api/auth/face-login` — student/teacher kiosk login
+- `POST /api/auth/face-verify` — admin 2FA verification
+- `POST /api/face-login` — legacy student enrollment face login
+
+---
+
+## ML Model Files
+
+Models are stored in `backend/models/face-api/` and loaded on server startup via `backend/utils/faceDetection.js`.
+
+Required files:
+
+```
+backend/models/face-api/
+  ssd_mobilenetv1_model-weights_manifest.json
+  ssd_mobilenetv1_model-shard1
+  face_landmark_68_model-weights_manifest.json
+  face_landmark_68_model-shard1
+  face_recognition_model-weights_manifest.json
+  face_recognition_model-shard1
+```
+
+See [MODELS_SETUP.md](MODELS_SETUP.md) for download instructions.
+
+---
+
+## Image Processing (`backend/utils/imageProcessor.js`)
+
+All images go through pre-processing before descriptor extraction:
+
+| Step | Operation | Value |
+|---|---|---|
+| Resize | Fit within bounding box | 416×416 |
+| Format | Convert to JPEG | Quality 90 |
+| Normalise | RGB channel order | Yes |
+
+---
+
+## Performance Notes
+
+- First inference after cold start is slower (~2–3 s) due to WASM JIT
+- Subsequent inferences are faster (~200–500 ms)
+- Bulk descriptor comparisons are O(n) — performance degrades with 1000+ enrolled users
+- Face descriptors are stored as plain `[Number]` arrays in MongoDB — no special index needed for comparisons

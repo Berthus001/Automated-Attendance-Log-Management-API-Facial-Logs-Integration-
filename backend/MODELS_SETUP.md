@@ -1,71 +1,59 @@
-# Face Recognition Model Setup
+# Models Setup � Face-API ML Files
 
-## ✅ Models Are Now Bundled
+The face recognition system requires pre-trained model weight files to be placed in `backend/models/face-api/` before starting the server.
 
-The required face-api.js model files are included in the repository under `backend/models/face-api/`.
-No manual download is required — just install npm dependencies and start the server.
+---
 
-## Models Included
+## Required Model Files
 
-| File | Purpose | Size |
-|------|---------|------|
-| `ssd_mobilenetv1_model.bin` + manifest | Face detection | ~5.4 MB |
-| `face_landmark_68_model.bin` + manifest | Face landmarks (68 points) | ~349 KB |
-| `face_recognition_model.bin` + manifest | 128-D face descriptor | ~6.2 MB |
-| `tiny_face_detector_model.bin` + manifest | Lightweight real-time detection | ~189 KB |
+```
+backend/models/face-api/
+  ssd_mobilenetv1_model-weights_manifest.json
+  ssd_mobilenetv1_model-shard1
+  face_landmark_68_model-weights_manifest.json
+  face_landmark_68_model-shard1
+  face_recognition_model-weights_manifest.json
+  face_recognition_model-shard1
+```
 
-## Backend Setup
+---
+
+## Download
+
+Download model files from the `@vladmandic/face-api` npm package or its GitHub releases:
 
 ```bash
-cd backend
-npm install
-npm start
+# Install the package (if not already installed)
+npm install @vladmandic/face-api
+
+# Copy model files from the package
+cp -r node_modules/@vladmandic/face-api/model/* backend/models/face-api/
 ```
 
-On first request the server logs:
-```
-Face recognition models loaded successfully
-```
+Or download directly from:
+https://github.com/vladmandic/face-api/tree/master/model
 
-## Frontend Models (CDN)
+---
 
-The React frontend loads models from the jsDelivr CDN at runtime:
+## Directory Structure After Setup
 
 ```
-https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model
+backend/
+  models/
+    face-api/
+      ssd_mobilenetv1_model-weights_manifest.json
+      ssd_mobilenetv1_model-shard1
+      face_landmark_68_model-weights_manifest.json
+      face_landmark_68_model-shard1
+      face_recognition_model-weights_manifest.json
+      face_recognition_model-shard1
+    index.js           ? Mongoose model exports
 ```
 
-Models loaded in the browser:
-- `tinyFaceDetector` — real-time face detection bounding boxes
-- `ssdMobilenetv1` — accurate detection for descriptor extraction
-- `faceLandmark68Net` — face landmark detection
-- `faceRecognitionNet` — 128-D descriptor for recognition
+---
 
-## Architecture
+## Verification
 
-```
-Browser (face-api.js)               Backend (face-api.js / WASM)
-─────────────────────               ──────────────────────────
-Camera live feed ──────────────────►  POST /api/enroll
- └─ Real-time detection                └─ extractFaceDescriptorFromBase64()
- └─ Capture frame (JPEG base64)         └─ Save descriptor to DB
+The models are loaded automatically on server startup by `backend/utils/faceDetection.js`. If model files are missing, the server will throw a `Cannot read properties of undefined` error during the first face operation.
 
-Face login page ────────────────────►  POST /api/auth/face-login
- └─ Capture frame (JPEG base64)         └─ extractFaceDescriptorFromBase64()
-                                         └─ Compare against all stored descriptors
-                                         └─ Return matched user + JWT
-```
-
-## Troubleshooting
-
-**Error: Face recognition models not found**
-- Ensure you have run `git pull` to get the latest model files
-- Check `backend/models/face-api/` contains `*.bin` and `*-weights_manifest.json` files
-
-**Error: WASM backend not initialized**
-- This is fixed in `utils/faceDetection.js` via `await tf.ready()` before model loading
-
-**Frontend models fail to load**
-- Check internet connection (models loaded from CDN)
-- Browser console will show the specific model that failed
-
+To verify the setup is working, make a POST request to `POST /api/auth/face-login` with a valid face image. A successful face detection confirms models are loaded correctly.

@@ -1,289 +1,131 @@
-# 🧪 Quick Test Guide - Role-Based Attendance System
+# RBAC & Attendance � Test Cases
 
-## ✅ Prerequisites
-
-1. **Backend running**: `cd backend && npm start`
-2. **Have test accounts**:
-   - SuperAdmin account
-   - Admin account
-   - Student account
-   - Teacher account
+Role-Based Access Control and attendance-specific test cases.
 
 ---
 
-## 🚀 Quick Test Checklist
+## Roles
 
-### ✅ Test 1: Student Logs Their Own Attendance
-
-```bash
-# 1. Login as student
-POST http://localhost:5000/api/auth/login
-{
-  "email": "student@example.com",
-  "password": "password123"
-}
-
-# Save the token from response
-
-# 2. Log attendance
-POST http://localhost:5000/api/logs/log-attendance
-Authorization: Bearer <student-token>
-{
-  "course": "CS101",
-  "status": "present"
-}
-
-# ✅ Expected: Success, attendance logged
-```
+| Role | Can Do |
+|---|---|
+| `superadmin` | Full access � all users, all logs, all settings |
+| `admin` | Manage own users, view own users' logs |
+| `teacher` | View own attendance, log own attendance |
+| `student` | View own attendance, log own attendance |
 
 ---
 
-### ✅ Test 2: Student Views Own History
+## RBAC Test Cases
 
-```bash
-GET http://localhost:5000/api/logs/my-attendance
-Authorization: Bearer <student-token>
+### User Endpoints
 
-# ✅ Expected: Returns only this student's attendance
-```
-
----
-
-### ✅ Test 3: Student CANNOT View All Logs
-
-```bash
-GET http://localhost:5000/api/logs
-Authorization: Bearer <student-token>
-
-# ❌ Expected: 403 Forbidden
-# Message: "Access denied. Required role(s): superadmin, admin"
-```
+| Test | Role | Endpoint | Expected |
+|---|---|---|---|
+| Superadmin lists all users | superadmin | GET /api/users | 200 � all users |
+| Admin lists own users | admin | GET /api/users | 200 � only admin's users |
+| Student lists users | student | GET /api/users | 403 Forbidden |
+| Admin creates student | admin | POST /api/users | 201 |
+| Admin creates another admin | admin | POST /api/users { role: "admin" } | 403 |
+| Superadmin creates admin | superadmin | POST /api/users { role: "admin" } | 201 |
+| Admin deletes own user | admin | DELETE /api/users/:id (own) | 200 |
+| Admin deletes other admin's user | admin | DELETE /api/users/:id (other) | 403 |
+| Superadmin deletes any user | superadmin | DELETE /api/users/:id | 200 |
+| Student deletes user | student | DELETE /api/users/:id | 403 |
 
 ---
 
-### ✅ Test 4: Admin Views Only Their Users' Attendance
+### Attendance Log Endpoints
 
-```bash
-# 1. Login as admin
-POST http://localhost:5000/api/auth/login
-{
-  "email": "admin@example.com",
-  "password": "password123"
-}
-
-# 2. View attendance logs
-GET http://localhost:5000/api/logs
-Authorization: Bearer <admin-token>
-
-# ✅ Expected: Returns ONLY attendance for students/teachers created by this admin
-# ✅ Check: Each log's createdBy field should match this admin's ID
-```
+| Test | Role | Endpoint | Expected |
+|---|---|---|---|
+| Admin views all logs | admin | GET /api/logs | 200 |
+| Superadmin views all logs | superadmin | GET /api/logs | 200 |
+| Student views own logs | student | GET /api/logs/my-attendance | 200 |
+| Student views all logs | student | GET /api/logs | 403 |
+| Student logs own attendance | student | POST /api/logs/log-attendance | 201 |
+| Admin deletes log | admin | DELETE /api/logs/:id | 200 |
+| Student deletes log | student | DELETE /api/logs/:id | 403 |
+| Admin views summary | admin | GET /api/logs/summary | 200 |
+| Student views summary | student | GET /api/logs/summary | 403 |
 
 ---
 
-### ✅ Test 5: Admin Views Statistics
+### Login Logs Endpoints
 
-```bash
-GET http://localhost:5000/api/logs/summary
-Authorization: Bearer <admin-token>
-
-# ✅ Expected: Statistics for only their users
-# ✅ Check: totalLogs, uniqueUsers should reflect only their created users
-```
-
----
-
-### ✅ Test 6: SuperAdmin Views ALL Attendance
-
-```bash
-# 1. Login as superadmin
-POST http://localhost:5000/api/auth/login
-{
-  "email": "superadmin@example.com",
-  "password": "password123"
-}
-
-# 2. View all logs
-GET http://localhost:5000/api/logs
-Authorization: Bearer <superadmin-token>
-
-# ✅ Expected: Returns ALL attendance logs from ALL users
-# ✅ Check: Should see logs from multiple admins' users
-```
+| Test | Role | Endpoint | Expected |
+|---|---|---|---|
+| Admin views all login logs | admin | GET /api/login-logs | 200 |
+| Student views all login logs | student | GET /api/login-logs | 403 |
+| Any role views own login history | any | GET /api/login-logs/me | 200 |
+| Admin views login stats | admin | GET /api/login-logs/stats | 200 |
+| Student views login stats | student | GET /api/login-logs/stats | 403 |
 
 ---
 
-### ✅ Test 7: Teacher Logs Attendance
+### Auth Endpoints
 
-```bash
-# 1. Login as teacher
-POST http://localhost:5000/api/auth/login
-{
-  "email": "teacher@example.com",
-  "password": "password123"
-}
-
-# 2. Log attendance
-POST http://localhost:5000/api/logs/log-attendance
-Authorization: Bearer <teacher-token>
-{
-  "course": "MATH201",
-  "status": "present"
-}
-
-# ✅ Expected: Success, attendance logged with userRole: "teacher"
-```
+| Test | Role | Endpoint | Expected |
+|---|---|---|---|
+| Any authenticated user gets own profile | any | GET /api/auth/me | 200 |
+| Unauthenticated gets profile | none | GET /api/auth/me | 401 |
+| Admin enrolls face | admin | POST /api/auth/enroll-face | 200 |
+| Student enrolls face via admin route | student | POST /api/auth/enroll-face | 403 |
+| Any role logs out | any | POST /api/auth/logout | 200 |
 
 ---
 
-### ✅ Test 8: Teacher Views Own History
+### Kiosk Endpoints (Public)
 
-```bash
-GET http://localhost:5000/api/logs/my-attendance
-Authorization: Bearer <teacher-token>
-
-# ✅ Expected: Returns only this teacher's attendance
-```
+| Test | Auth | Endpoint | Expected |
+|---|---|---|---|
+| Load descriptors without token | none | GET /api/kiosk/descriptors | 200 |
+| Record attendance without token | none | POST /api/kiosk/attendance | 201 |
 
 ---
 
-### ✅ Test 9: Teacher CANNOT View Other Logs
+## Attendance-Specific Test Cases
 
-```bash
-GET http://localhost:5000/api/logs
-Authorization: Bearer <teacher-token>
+### Duplicate Attendance Prevention
 
-# ❌ Expected: 403 Forbidden
-```
+The system does **not** prevent multiple attendance logs per user per day by default. This is intentional (check-in/check-out support).
 
----
-
-### ✅ Test 10: Prevent Duplicate Attendance (Within 1 Minute)
-
-```bash
-# 1. Log attendance
-POST http://localhost:5000/api/logs/log-attendance
-Authorization: Bearer <student-token>
-{
-  "course": "CS101",
-  "status": "present"
-}
-
-# 2. Immediately try to log again
-POST http://localhost:5000/api/logs/log-attendance
-Authorization: Bearer <student-token>
-{
-  "course": "CS101",
-  "status": "present"
-}
-
-# ❌ Expected: 409 Conflict
-# Message: "Attendance already logged within the last minute"
-```
+| Test | Expected |
+|---|---|
+| Same user scans twice in 1 hour | Two separate logs created |
+| Device sends duplicate timestamp on sync | Deduplication logic in device sync controller |
 
 ---
 
-### ✅ Test 11: Filter by User Role (Admin)
+### Confidence Threshold
 
-```bash
-GET http://localhost:5000/api/logs?userRole=student
-Authorization: Bearer <admin-token>
-
-# ✅ Expected: Returns only student attendance (for users they created)
-```
-
----
-
-### ✅ Test 12: Date Range Filtering
-
-```bash
-GET http://localhost:5000/api/logs/my-attendance?startDate=2026-05-01&endDate=2026-05-04
-Authorization: Bearer <student-token>
-
-# ✅ Expected: Returns only attendance within date range
-```
+| Test | Input | Expected |
+|---|---|---|
+| High-confidence match | distance = 0.3 | Match accepted, confidence = 0.7 |
+| Borderline match | distance = 0.58 | Match accepted |
+| Low-confidence match | distance = 0.65 | Match rejected, 404 |
 
 ---
 
-## 🔍 Verification Checklist
+### Device Sync RBAC
 
-After all tests, verify:
+Device sync endpoints are **public** � they are designed for kiosk hardware that cannot authenticate.
 
-- [ ] Students can log attendance and view only their history
-- [ ] Teachers can log attendance and view only their history
-- [ ] Students/Teachers get 403 when trying to access admin endpoints
-- [ ] Admins see ONLY their users' attendance (not other admins' users)
-- [ ] SuperAdmin sees ALL attendance logs
-- [ ] Duplicate logging is prevented (1-minute cooldown)
-- [ ] All endpoints require authentication (no public access)
-- [ ] Role-based filtering works correctly
-- [ ] Pagination works correctly
-- [ ] Date filtering works correctly
+| Test | Auth | Expected |
+|---|---|---|
+| Single sync without token | none | 201 |
+| Bulk sync without token | none | 201 |
 
 ---
 
-## 🛠️ Using Postman
+## Token and Session Tests
 
-1. **Import Collection**: Create a new Postman collection
-2. **Set Environment Variables**:
-   - `baseUrl`: `http://localhost:5000`
-   - `superadminToken`: (set after login)
-   - `adminToken`: (set after login)
-   - `studentToken`: (set after login)
-   - `teacherToken`: (set after login)
-
-3. **Create Test Scripts**:
-```javascript
-// Save token after login
-pm.environment.set("studentToken", pm.response.json().token);
-```
-
----
-
-## 📊 Expected Database State
-
-After testing, your AttendanceLog collection should have:
-
-```javascript
-{
-  "_id": ObjectId("..."),
-  "userId": ObjectId("..."),        // Reference to User
-  "userRole": "student",            // or "teacher", "admin"
-  "course": "CS101",
-  "timestamp": ISODate("..."),
-  "status": "present",
-  "createdBy": ObjectId("..."),     // Admin who created this user
-  "createdAt": ISODate("..."),
-  "updatedAt": ISODate("...")
-}
-```
-
----
-
-## 🐛 Common Issues & Solutions
-
-### Issue 1: "Not authorized to access this route"
-**Solution:** Token expired or invalid. Login again to get new token.
-
-### Issue 2: Admin sees no logs
-**Solution:** Make sure the admin has created users first. If no users are created by this admin, they will see empty results.
-
-### Issue 3: Student sees all logs
-**Solution:** Check that routes have `allowRoles('superadmin', 'admin')` middleware. Students should get 403 Forbidden.
-
-### Issue 4: "createdBy is null"
-**Solution:** User was created before implementing this system. Update user document to include createdBy field.
-
----
-
-## 🎯 Success Criteria
-
-✅ **All tests pass**  
-✅ **403 errors where expected**  
-✅ **Role-based filtering working**  
-✅ **No unauthorized access**  
-✅ **Data isolation between admins**
-
----
-
-**Ready to test?** Start with Test 1 (Student Logs Attendance) and work through sequentially!
+| Test | Expected |
+|---|---|
+| Login with valid credentials | 200, token returned |
+| Login with wrong password | 401 |
+| Login while already logged in | 409 |
+| Login with forceLogin: true | 200, session reset |
+| Session expires after 24 hours | Auto-cleared on next login attempt |
+| JWT expires after 7 days | 401 on next request, requires re-login |
+| Logout | 200, isLoggedIn = false |
+| Request after logout with same token | 401 |

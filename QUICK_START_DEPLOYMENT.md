@@ -1,160 +1,127 @@
-# ⚡ Quick Start: Deploy in 15 Minutes
+# Quick Start � Deployment
 
-**TL;DR** - Fast track deployment for experienced developers.
-
----
-
-## 🎯 Prerequisites
-
-- [ ] GitHub repo with code
-- [ ] MongoDB Atlas cluster ready
-- [ ] Render account
-- [ ] Vercel account
+Fastest path from zero to running system.
 
 ---
 
-## 🚀 3-Step Deployment
+## Step 1: Clone the Repository
 
-### STEP 1: Backend (Render) - 5 minutes
-
-1. **Create Service:**
-   - Go to render.com → New Web Service
-   - Connect GitHub repo
-   - Root Dir: `backend`
-   - Build: `npm install`
-   - Start: `node server.js`
-
-2. **Environment Variables:**
-   ```env
-   NODE_ENV=production
-   PORT=5000
-   MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/attendance_db?retryWrites=true&w=majority
-   JWT_SECRET=[32+ random characters]
-   FRONTEND_URL=http://localhost:3001
-   ```
-
-3. **Deploy & Copy URL**
-
----
-
-### STEP 2: Frontend (Vercel) - 5 minutes
-
-1. **Create `.env.production`:**
-   ```env
-   REACT_APP_API_URL=https://your-backend.onrender.com/api
-   ```
-
-2. **Deploy:**
-   - Go to vercel.com → New Project
-   - Import repo
-   - Root Dir: `frontend`
-   - Framework: Create React App
-   - Add env var: `REACT_APP_API_URL`
-
-3. **Copy Vercel URL**
-
----
-
-### STEP 3: Update CORS - 2 minutes
-
-1. Go to Render → Environment
-2. Update `FRONTEND_URL` to Vercel URL
-3. Wait for redeploy
-
----
-
-## 🔐 Create Superadmin - 3 minutes
-
-**In Render Shell:**
 ```bash
-node create-superadmin.js
+git clone <your-repo-url>
+cd "GROUP 4 - Automated Attendance Log Management API (Facial Logs Integration)"
 ```
 
-**Or locally:**
+---
+
+## Step 2: Configure Backend
+
 ```bash
-# Update local .env with production MONGO_URI
+cd backend
+cp .env.example .env   # or create .env manually
+```
+
+Edit `backend/.env`:
+
+```env
+NODE_ENV=development
+PORT=5000
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/attendance
+JWT_SECRET=generate-a-random-64-char-string-here
+JWT_EXPIRE=7d
+FRONTEND_URL=http://localhost:3001
+```
+
+Generate `JWT_SECRET`:
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+---
+
+## Step 3: Install Backend Dependencies
+
+```bash
+cd backend
+npm install
+```
+
+---
+
+## Step 4: Download Face-API Models
+
+Create `backend/models/face-api/` and add these files from the [@vladmandic/face-api releases](https://github.com/vladmandic/face-api/tree/master/model):
+
+- `ssd_mobilenetv1_model-weights_manifest.json`
+- `ssd_mobilenetv1_model-shard1`
+- `face_landmark_68_model-weights_manifest.json`
+- `face_landmark_68_model-shard1`
+- `face_recognition_model-weights_manifest.json`
+- `face_recognition_model-shard1`
+
+---
+
+## Step 5: Start Backend
+
+```bash
+cd backend
+node server.js
+# Server starts on http://localhost:5000
+```
+
+---
+
+## Step 6: Create Superadmin
+
+```bash
 cd backend
 node create-superadmin.js
-# Revert .env
 ```
 
-**Login:**
+Default credentials:
 - Email: `superadmin@attendance.com`
 - Password: `Admin@123456`
-- **Change password immediately!**
 
 ---
 
-## ✅ Quick Test
+## Step 7: Configure Frontend
 
-1. Visit Vercel URL
-2. Login with superadmin
-3. Create test teacher
-4. Verify webcam works
-5. Done! ✨
+```bash
+cd frontend
+```
 
----
-
-## 📚 Full Documentation
-
-- [Complete Deployment Guide](./DEPLOYMENT_GUIDE.md)
-- [Deployment Checklist](./DEPLOYMENT_CHECKLIST.md)
-- [Troubleshooting Guide](./DEPLOYMENT_TROUBLESHOOTING.md)
-- [Main README](./README.md)
+Create `frontend/.env`:
+```env
+REACT_APP_API_URL=http://localhost:5000/api
+```
 
 ---
 
-## 🐛 Common Issues
+## Step 8: Install Frontend Dependencies and Start
 
-| Issue | Fix |
-|-------|-----|
-| CORS error | Update `FRONTEND_URL` in Render |
-| MongoDB fails | Check Network Access: 0.0.0.0/0 |
-| Build fails | Verify Root Directory settings |
-| White screen | Check browser console + env vars |
-| Service sleeping | Free tier sleeps after 15min (normal) |
-
----
-
-## 🔗 Quick Links
-
-**Your URLs:**
-- Backend: `https://[your-service].onrender.com`
-- Frontend: `https://[your-app].vercel.app`
-
-**Dashboards:**
-- Render: https://dashboard.render.com
-- Vercel: https://vercel.com/dashboard
-- MongoDB: https://cloud.mongodb.com
-
-**Logs:**
-- Render: Dashboard → Service → Logs
-- Vercel: Dashboard → Project → Deployments
-- Browser: F12 → Console
+```bash
+cd frontend
+npm install
+npm start
+# Frontend starts on http://localhost:3001
+```
 
 ---
 
-## 💡 Pro Tips
+## Step 9: Verify Everything Works
 
-1. **Save your URLs** - You'll need them multiple times
-2. **Enable auto-deploy** - Push to GitHub = auto redeploy
-3. **Use strong secrets** - 32+ character JWT_SECRET
-4. **Monitor logs** - First few days, check regularly
-5. **Upgrade later** - Start free, upgrade if needed
-
----
-
-## 📞 Need Help?
-
-1. Check [Troubleshooting Guide](./DEPLOYMENT_TROUBLESHOOTING.md)
-2. Read platform logs
-3. Search error on Google/Stack Overflow
-4. Contact platform support
+1. Open `http://localhost:3001` � kiosk page should load
+2. Open `http://localhost:3001/admin-login` � login form should appear
+3. Log in with `superadmin@attendance.com` / `Admin@123456`
+4. Dashboard should open
 
 ---
 
-**Total Time:** ~15 minutes
-**Cost:** $0 (free tiers)
-**Difficulty:** ⭐⭐⭐ (Medium)
+## Deploy to Production
 
-**You got this! 🚀**
+| Service | Guide |
+|---|---|
+| Backend ? Render | [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) |
+| Frontend ? Vercel | [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) |
+| Config files | [DEPLOYMENT_WITH_CONFIG_FILES.md](DEPLOYMENT_WITH_CONFIG_FILES.md) |
+| Troubleshooting | [DEPLOYMENT_TROUBLESHOOTING.md](DEPLOYMENT_TROUBLESHOOTING.md) |
+| Pre-deploy checklist | [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) |

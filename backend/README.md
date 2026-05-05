@@ -1,156 +1,301 @@
-# Attendance Management API
+﻿# Attendance Management API — Backend
 
-Automated Attendance Log Management API with Facial Recognition Integration
+Node.js/Express REST API for the Automated Attendance Log Management System with facial recognition.
 
-## Features
+---
 
-- Express.js backend server
-- MongoDB database integration with Mongoose
-- **Facial Recognition** with face-api.js
-- **Student Enrollment** with face detection
-- **Image Processing** with Sharp (compression, resizing)
-- **Base64 to Image** conversion
-- RESTful API architecture
-- Clean folder structure
-- Environment configuration with dotenv
-- Error handling middleware
-- CORS enabled
-- Request logging with Morgan
+## Table of Contents
+
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [Running the Server](#running-the-server)
+- [API Endpoints](#api-endpoints)
+- [Middleware & Error Handling](#middleware--error-handling)
+- [Face Recognition Setup](#face-recognition-setup)
+- [Quick Start Examples](#quick-start-examples)
+- [Documentation Files](#documentation-files)
+
+---
 
 ## Project Structure
 
 ```
-/backend
- ├── config/         # Configuration files (database, etc.)
- ├── models/         # Mongoose models (Student, AttendanceLog, User)
- │   └── face-api/   # Face recognition models (download required)
- ├── routes/         # API routes
- ├── controllers/    # Route controllers
- ├── middleware/     # Custom middleware
- ├── utils/          # Utility functions (image processing, face detection)
- ├── uploads/        # File uploads directory
- ├── .env            # Environment variables
- ├── .gitignore      # Git ignore file
- ├── package.json    # Dependencies
- └── server.js       # Application entry point
+backend/
+├── config/
+│   └── db.js                    # MongoDB Atlas connection
+├── controllers/
+│   ├── authController.js        # Login, face 2FA, token management
+│   ├── userController.js        # User CRUD operations
+│   ├── enrollController.js      # Student face enrollment
+│   ├── faceLoginController.js   # Face recognition attendance logging
+│   ├── attendanceController.js  # Attendance record management
+│   ├── logsController.js        # Attendance log querying & aggregation
+│   ├── loginLogsController.js   # Admin login audit trail
+│   ├── uploadController.js      # Base64 image upload & processing
+│   ├── deviceSyncController.js  # External device attendance sync
+│   └── kioskController.js       # Kiosk-mode operations
+├── middleware/
+│   ├── auth.js                  # JWT verification + RBAC guards
+│   ├── asyncHandler.js          # Wraps async route handlers
+│   ├── errorHandler.js          # Global error response handler
+│   ├── logger.js                # Per-request logging middleware
+│   └── index.js                 # Middleware barrel export
+├── models/
+│   ├── User.model.js            # User schema (admin, teacher, student, superadmin)
+│   ├── Student.model.js         # Student profile + face descriptor
+│   ├── AttendanceLog.model.js   # Attendance event records
+│   ├── LoginLog.model.js        # Admin login audit records
+│   └── face-api/                # face-api model weights (download separately)
+├── routes/
+│   ├── authRoutes.js
+│   ├── userRoutes.js
+│   ├── enrollRoutes.js
+│   ├── faceLoginRoutes.js
+│   ├── attendanceRoutes.js
+│   ├── logsRoutes.js
+│   ├── loginLogsRoutes.js
+│   ├── uploadRoutes.js
+│   ├── deviceSyncRoutes.js
+│   └── kioskRoutes.js
+├── utils/
+│   ├── faceDetection.js         # Face descriptor extraction & matching
+│   ├── imageHelpers.js          # Base64 / buffer conversion helpers
+│   └── imageProcessor.js        # Sharp-based resize & compression
+├── uploads/
+│   ├── faces/                   # Stored face images
+│   ├── students/                # Student profile images
+│   └── attendance/              # Attendance capture images
+├── create-superadmin.js         # One-time superadmin seed script
+├── server.js                    # Application entry point
+└── package.json
 ```
+
+---
 
 ## Installation
 
-1. Install dependencies:
 ```bash
 npm install
 ```
-**Download Face Recognition Models** (Required for enrollment):
-   - See [MODELS_SETUP.md](MODELS_SETUP.md) for detailed instructions
-   - Download models from: https://github.com/vladmandic/face-api/tree/master/model
-   - Place in `models/face-api/` directory
 
-4. 
-2. Configure environment variables:
-   - Copy `.env` and update with your MongoDB connection string
-   - Set your desired PORT (default: 5000)
+### Face-api Model Files (Required)
 
-3. Start the server:
-```bash
-# Development mode with nodemon
-npm run dev
+Face recognition will not work without the model files.
 
-# Production mode
-npm start
-```
+1. Download from: https://github.com/vladmandic/face-api/tree/master/model
+2. Place all files in `models/face-api/`
+
+See [MODELS_SETUP.md](MODELS_SETUP.md) for the complete file list and instructions.
+
+---
 
 ## Environment Variables
 
+Create a `.env` file in this directory:
+
 ```env
+# MongoDB Atlas connection string (SRV format)
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/attendance_db?retryWrites=true&w=majority
+
+# JWT secret — minimum 32 characters, use a random string
+JWT_SECRET=your-super-secret-jwt-key-here
+
+# Server port
 PORT=5000
+
+# Environment
 NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/attendance_db
-JWT_SECRET=your_jwt_secret_key_here
-API_VERSION=v1
+
+# Frontend URL for CORS (set in production)
+FRONTEND_URL=https://your-app.vercel.app
 ```
 
-## Middleware & Error Handling
+> Never commit `.env` to version control.
 
-The API includes robust middleware for error handling and request logging:
+---
 
-### 🛡️ Error Handling
-- **asyncHandler** - Wraps async functions to catch errors automatically
-- **errorHandler** - Global error handler with consistent JSON responses
-- Returns: `{ success: false, message: "error description" }`
+## Running the Server
 
-### 📝 Request Logging
-- **requestLogger** - Logs all requests with timestamps, methods, URLs, and response times
-- **morgan** - HTTP request logger (development mode only)
+```bash
+# Development — auto-reload with nodemon
+npm run dev
 
-### Error Types Handled
-- ✅ Mongoose validation errors
-- ✅ Mongoose duplicate key errors
-- ✅ Invalid ObjectId (cast errors)
-- ✅ JWT authentication errors
-- ✅ File upload errors
-- ✅ Custom application errors
+# Production
+npm start
+```
 
-📖 **Complete guide:** [ERROR_HANDLING.md](ERROR_HANDLING.md)
+Server starts at `http://localhost:5000`.
+
+**First-time setup:** Create the superadmin account before first login:
+
+```bash
+node create-superadmin.js
+```
+
+Default credentials: `superadmin@attendance.com` / `Admin@123456` (change immediately).
+
+---
 
 ## API Endpoints
 
-### 🔐 Face Login (Automated Attendance)
-- `POST /api/v1/face-login` - Log attendance via facial recognition
-- `POST /api/v1/face-login/verify` - Verify face without logging
-- `GET /api/v1/face-login/stats/:studentId` - Get attendance statistics
+All routes are prefixed with `/api`. Protected routes require `Authorization: Bearer <token>`.
 
-📖 **Detailed docs:** [FACE_LOGIN_API.md](FACE_LOGIN_API.md)
+### Authentication — `/api/auth`
 
-### 🎓 Enrollment (Student Registration with Face Recognition)
-- `POST /api/v1/enroll` - Enroll new student with face image
-- `GET /api/v1/enroll` - Get all enrolled students
-- `GET /api/v1/enroll/:studentId` - Get specific student
-- `PUT /api/v1/enroll/:studentId` - Update student information
-- `DELETE /api/v1/enroll/:studentId` - Delete student
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/login` | Public | Email + password login, returns JWT |
+| POST | `/api/auth/face-login` | Public | Face 2FA step for admins |
+| GET | `/api/auth/me` | Required | Returns current user profile |
+| POST | `/api/auth/logout` | Required | Invalidate session |
 
-📖 **Detailed docs:** [ENROLLMENT_API.md](ENROLLMENT_API.md)
+### Users — `/api/users`
 
-### 📤 Upload (Image Processing)
-- `POST /api/v1/upload/image` - Upload single base64 image
-- `POST /api/v1/upload/images` - Upload multiple images
-- `POST /api/v1/upload/face` - Upload face image
+| Method | Path | Roles | Description |
+|---|---|---|---|
+| GET | `/api/users` | Admin+ | List users (filtered by role) |
+| GET | `/api/users/:id` | Admin+ | Get single user |
+| POST | `/api/users` | Admin+ | Create user |
+| PUT | `/api/users/:id` | Admin+ | Update user |
+| DELETE | `/api/users/:id` | Admin+ | Delete user |
 
-📖 **Usage examples:** [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md)
+### Enrollment — `/api/enroll`
 
-### 📊 Logs (Attendance Records)
-- `GET /api/v1/logs` - Get attendance logs with filtering & pagination
-- `GET /api/v1/logs/:id` - Get single log by ID
-- `GET /api/v1/logs/summary` - Get aggregated statistics
-- `GET /api/v1/logs/by-date` - Get logs grouped by date
-- `DELETE /api/v1/logs/:id` - Delete attendance log
+| Method | Path | Roles | Description |
+|---|---|---|---|
+| POST | `/api/enroll` | Admin+ | Enroll student with face image |
+| GET | `/api/enroll` | Admin+ | List all enrolled students |
+| GET | `/api/enroll/:studentId` | Admin+ | Get single student |
+| PUT | `/api/enroll/:studentId` | Admin+ | Update student info |
+| DELETE | `/api/enroll/:studentId` | Admin+ | Remove student |
 
-📖 **Detailed docs:** [LOGS_API.md](LOGS_API.md)
+### Face Login / Attendance — `/api/face-login`
 
-### 🔄 Device Sync (External Device Integration)
-- `POST /api/v1/device-sync` - Sync single attendance log from device
-- `POST /api/v1/device-sync/bulk` - Bulk sync multiple logs
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/face-login` | Public | Match face and log attendance |
+| POST | `/api/face-login/verify` | Public | Verify face without logging |
+| GET | `/api/face-login/stats/:studentId` | Required | Student attendance statistics |
 
-### 👥 Users
-- `GET /api/v1/users` - Get all users
-- `GET /api/v1/users/:id` - Get single user
-- `POST /api/v1/users` - Create user
-- `PUT /api/v1/users/:id` - Update user
-- `DELETE /api/v1/users/:id` - Delete user
-Sharp** - Image processing and compression
-- **@vladmandic/face-api** - Face detection and recognition
-- **Canvas** - Image manipulation for face-api
-- **dotenv** - Environment configuration
-- **CORS** - Cross-origin resource sharing
-- **Morgan** - HTTP request logger
+### Attendance Logs — `/api/logs`
 
-## Quick Start Example
+| Method | Path | Roles | Description |
+|---|---|---|---|
+| GET | `/api/logs` | Required | Get logs (filter by student, date, status) |
+| GET | `/api/logs/:id` | Required | Get single log |
+| GET | `/api/logs/summary` | Required | Aggregated attendance stats |
+| GET | `/api/logs/by-date` | Required | Logs grouped by date |
+| DELETE | `/api/logs/:id` | Admin+ | Delete a log entry |
 
-### 1. Enroll a Student
+### Upload — `/api/upload`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/upload/image` | Required | Upload a single base64 image |
+| POST | `/api/upload/images` | Required | Upload multiple base64 images |
+| POST | `/api/upload/face` | Required | Upload and process a face image |
+
+### Device Sync — `/api/device-sync`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/device-sync` | Required | Sync a single log from external device |
+| POST | `/api/device-sync/bulk` | Required | Bulk sync multiple logs |
+
+### Kiosk — `/api/kiosk`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/kiosk/scan` | Public | Kiosk face scan and check-in |
+| GET | `/api/kiosk/status` | Public | Kiosk health/status |
+
+### Login Logs — `/api/login-logs`
+
+| Method | Path | Roles | Description |
+|---|---|---|---|
+| GET | `/api/login-logs` | Admin+ | List admin login audit records |
+
+---
+
+## Middleware & Error Handling
+
+### asyncHandler
+
+Wraps async route handlers to forward thrown errors to the global error handler — no manual try/catch needed.
+
+```js
+router.get('/example', asyncHandler(async (req, res) => {
+  const data = await SomeModel.find();
+  res.json({ success: true, data });
+}));
+```
+
+### errorHandler
+
+Global error handler (`middleware/errorHandler.js`). Catches all unhandled errors and returns a consistent JSON response:
+
+```json
+{
+  "success": false,
+  "message": "Error description"
+}
+```
+
+Handles:
+- Mongoose validation errors → `400`
+- Mongoose duplicate key errors → `400`
+- Invalid ObjectId (cast errors) → `400`
+- JWT errors → `401`
+- File upload errors → `400`
+- Custom `AppError` with status code → respective status
+
+### auth Middleware
+
+JWT verification + role-based access control:
+
+```js
+const { protect, authorize } = require('../middleware/auth');
+
+// Require login
+router.get('/protected', protect, handler);
+
+// Require specific roles
+router.delete('/admin-only', protect, authorize('admin', 'superadmin'), handler);
+```
+
+### requestLogger
+
+Logs every request with timestamp, method, URL, and response time.
+
+---
+
+## Face Recognition Setup
+
+The system uses `@vladmandic/face-api` with a TensorFlow.js WASM backend (no native compilation required on Windows).
+
+**How enrollment works:**
+1. Client sends a base64 face image to `POST /api/enroll`
+2. Server extracts a 128-point face descriptor using `SsdMobilenetv1` + `FaceRecognitionNet`
+3. Descriptor is stored in the `Student` document in MongoDB
+
+**How face login works:**
+1. Client sends a base64 face image to `POST /api/face-login`
+2. Server extracts the descriptor from the incoming image
+3. Descriptor is compared (Euclidean distance) against all enrolled students
+4. If distance < threshold (0.5 default), attendance is logged
+5. Returns matched student info + confidence score
+
+---
+
+## Quick Start Examples
+
+### Enroll a Student
 
 ```bash
-curl -X POST http://localhost:5000/api/v1/enroll \
+curl -X POST http://localhost:5000/api/enroll \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
   -d '{
     "studentId": "STU001",
     "name": "John Doe",
@@ -159,111 +304,59 @@ curl -X POST http://localhost:5000/api/v1/enroll \
   }'
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Student enrolled successfully",
-  "data": {
-    "studentId": "STU001",
-    "name": "John Doe",
-    "course": "Computer Science",
-    "imagePath": "uploads/students/img_1714694400000_a1b2c3d4.jpeg",
-    "faceDetection": {
-      "confidence": 0.9856,
-      "boundingBox": { "x": 45, "y": 32, "width": 180, "height": 220 }
-    }
-  }
-}
-```
-
-### 2. Log Attendance with Face Recognition
+### Log Attendance via Face Scan
 
 ```bash
-curl -X POST http://localhost:5000/api/v1/face-login \
+curl -X POST http://localhost:5000/api/face-login \
   -H "Content-Type: application/json" \
   -d '{
     "image": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
-    "deviceId": "DEVICE_001"
+    "deviceId": "KIOSK_001"
   }'
 ```
 
-**Response:**
+Response:
+
 ```json
 {
   "success": true,
   "message": "Attendance logged successfully",
   "data": {
-    "student": {
-      "studentId": "STU001",
-      "name": "John Doe",
-      "course": "Computer Science"
-    },
-    "match": {
-      "confidence": "0.8542",
-      "distance": "0.1458"
-    }
+    "student": { "studentId": "STU001", "name": "John Doe" },
+    "match": { "confidence": "0.8542", "distance": "0.1458" },
+    "timestamp": "2026-05-05T08:30:00.000Z"
   }
 }
 ```
 
-### 3. Query Attendance Logs
+### Query Attendance Logs
 
 ```bash
-curl "http://localhost:5000/api/v1/logs?studentId=STU001&startDate=2026-04-01&endDate=2026-04-30&page=1&limit=10"
+curl "http://localhost:5000/api/logs?studentId=STU001&startDate=2026-05-01&endDate=2026-05-31&page=1&limit=10" \
+  -H "Authorization: Bearer <token>"
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "count": 10,
-  "total": 18,
-  "page": 1,
-  "totalPages": 2,
-  "data": [
-    {
-      "studentId": "STU001",
-      "course": "Computer Science",
-      "timestamp": "2026-04-23T14:30:00.000Z",
-      "status": "present",
-      "confidenceScore": 0.8542
-    }
-  ]
-}
-```
+---
 
 ## Documentation Files
 
-- 📄 [WORKFLOW_EXAMPLE.md](WORKFLOW_EXAMPLE.md) - Complete workflow from enrollment to attendance
-- 📄 [ERROR_HANDLING.md](ERROR_HANDLING.md) - Error handling & middleware guide
-- 📄 [FACE_LOGIN_API.md](FACE_LOGIN_API.md) - Face login & attendance logging API
-- 📄 [DEVICE_SYNC_API.md](DEVICE_SYNC_API.md) - Device sync for external attendance uploads
-- 📄 [LOGS_API.md](LOGS_API.md) - Attendance logs querying & filtering API
-- 📄 [ENROLLMENT_API.md](ENROLLMENT_API.md) - Complete enrollment API documentation
-- 📄 [MODELS_SETUP.md](MODELS_SETUP.md) - Face recognition models setup guide
-- 📄 [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) - Image processing utility examples
-### 👥 Users
-- `GET /api/v1/users` - Get all users
-- `GET /api/v1/users/:id` - Get single user
-- `POST /api/v1/users` - Create user
-- `PUT /api/v1/users/:id` - Update user
-- `DELETE /api/v1/users/:id` - Delete user
+| File | Description |
+|---|---|
+| [AUTHENTICATION_FLOW.md](AUTHENTICATION_FLOW.md) | Login flow, JWT lifecycle, face 2FA |
+| [USER_MANAGEMENT_API.md](USER_MANAGEMENT_API.md) | User CRUD, roles, RBAC |
+| [ENROLLMENT_API.md](ENROLLMENT_API.md) | Student enrollment with face |
+| [FACE_LOGIN_API.md](FACE_LOGIN_API.md) | Face recognition attendance API |
+| [FACE_VERIFICATION_API.md](FACE_VERIFICATION_API.md) | Standalone face verification |
+| [FACE_RECOGNITION_API.md](FACE_RECOGNITION_API.md) | Face recognition internals |
+| [LOGS_API.md](LOGS_API.md) | Attendance log querying & filtering |
+| [LOGIN_TRACKING_API.md](LOGIN_TRACKING_API.md) | Admin login audit API |
+| [DEVICE_SYNC_API.md](DEVICE_SYNC_API.md) | External device sync |
+| [MODELS_SETUP.md](MODELS_SETUP.md) | Face-api model files setup |
+| [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error handling reference |
+| [SESSION_MANAGEMENT.md](SESSION_MANAGEMENT.md) | JWT session management |
+| [WORKFLOW_EXAMPLE.md](WORKFLOW_EXAMPLE.md) | End-to-end workflow walkthrough |
+| [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) | Image processing examples |
 
-## Technologies Used
+---
 
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM
-- **dotenv** - Environment configuration
-- **CORS** - Cross-origin resource sharing
-- **Morgan** - HTTP request logger
-
-## Development
-
-The API runs on `http://localhost:5000` by default.
-
-## License
-
-ISC
+**Version:** 1.0.0 | **Last Updated:** May 2026
