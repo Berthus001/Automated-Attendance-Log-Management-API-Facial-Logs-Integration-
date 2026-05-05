@@ -180,6 +180,10 @@ Only the Superadmin can create Admin accounts.
 
 > **How Teachers Log In:** Teachers use the **Face Login** tab on the login page — they do NOT use email/password.
 
+> **Teacher Attendance (Same as Students):**
+> - Teachers use the **Kiosk Scanner** for attendance **time-in and time-out**
+> - The attendance flow for teachers is the same as students (first scan = time-in, second scan = time-out)
+
 ---
 
 ## 7. Managing Students
@@ -295,6 +299,8 @@ Only the Superadmin can create Admin accounts.
 ## 9. Viewing Attendance Logs
 
 The Superadmin can view ALL attendance logs from every user in the system.
+
+Attendance is supported for **both students and teachers** using the same kiosk process.
 
 ### 9.1 Accessing Attendance Logs
 
