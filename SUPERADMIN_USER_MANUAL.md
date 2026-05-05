@@ -47,25 +47,36 @@ The **Superadmin** is the highest-privileged role in the system. As a Superadmin
 - **Local:** `http://localhost:3001`
 - **Production:** Your deployed Vercel frontend URL
 
-**Step 3.** You will land on the **Login Page**.
+**Step 3.** You will be redirected to the **Sign In Page**.
+
+On the Sign In Page, you will see the following sections:
+
+| Section | Description |
+|---|---|
+| Demo Credentials | Sample login credentials provided for testing and demonstration purposes |
+| Admin Login | Login form for Superadmin and Admin accounts using email and password |
+| Faculty Login | Login option for Teacher accounts using face recognition |
+| Student Login | Login option for Student accounts using face recognition |
 
 ---
 
 ## 3. Logging In
 
-The Superadmin logs in using **email and password** (not face login).
+The Superadmin logs in using the **Admin Login** section (email and password).
 
 ### Step-by-Step Login
 
-**Step 1.** On the Login Page, click the **"Admin Login"** tab (not the "Face Login" tab).
+**Step 1.** On the Sign In Page, locate and click the **"Admin Login"** tab.
 
-**Step 2.** Enter your **Email Address** in the email field.
+**Step 2.** You may refer to the **Demo Credentials** section on the page if needed for testing.
 
-**Step 3.** Enter your **Password** in the password field.
+**Step 3.** Enter your **Email Address** in the email field.
 
-**Step 4.** Click the **"Login"** button.
+**Step 4.** Enter your **Password** in the password field.
 
-**Step 5.** Upon successful login, you will be taken to the **Superadmin Dashboard**.
+**Step 5.** Click the **"Login"** button.
+
+**Step 6.** Upon successful login, you will be taken to the **Superadmin Dashboard**.
 
 ### Already Logged In on Another Device?
 
