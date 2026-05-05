@@ -29,10 +29,9 @@ The following budget plan is structured for a small development team of 4–5 me
 | Cloud Database | MongoDB Atlas | M0 Free Tier (dev) / M10 Shared (prod) | ₱0 – ₱1,400 | 1 month | ₱0 – ₱1,400 |
 | Backend Hosting | Render | Free Tier or Starter | ₱0 – ₱1,000 | 1 month | ₱0 – ₱1,000 |
 | Frontend Hosting | Vercel | Free Tier | ₱0 | 1 month | ₱0 |
-| Webcam/Kiosk Device (Hardware) | Generic USB Camera | HD 1080p | ₱2,000 | 1 unit | ₱2,000 |
 | Custom Domain (optional) | Namecheap | .com domain | ₱700 | 1 year | ₱700 |
 | SSL Certificate | Let's Encrypt | Free | ₱0 | — | ₱0 |
-| **Subtotal — Infrastructure** | | | | | **₱2,000 – ₱5,100** |
+| **Subtotal — Infrastructure** | | | | | **₱0 – ₱3,100** |
 
 ---
 
@@ -70,8 +69,8 @@ The following budget plan is structured for a small development team of 4–5 me
 |---|---|
 | Internet connectivity (team, 1 month) | ₱3,500 |
 | Printing (documentation, user manuals, deployment guides) | ₱800 |
-| Contingency buffer (10% of total) | ₱26,830 |
-| **Subtotal — Miscellaneous** | **₱31,130** |
+| Contingency buffer (10% of total) | ₱25,030 |
+| **Subtotal — Miscellaneous** | **₱29,330** |
 
 ---
 
@@ -80,10 +79,10 @@ The following budget plan is structured for a small development team of 4–5 me
 | Category | Estimated Cost (PHP) |
 |---|---|
 | Human Resources | ₱262,000 |
-| Infrastructure and Hosting | ₱3,550 (midpoint estimate) |
+| Infrastructure and Hosting | ₱1,550 (midpoint estimate) |
 | Software and Tools | ₱0 |
-| Miscellaneous | ₱31,130 |
-| **TOTAL PROJECT BUDGET** | **₱296,680** |
+| Miscellaneous | ₱29,330 |
+| **TOTAL PROJECT BUDGET** | **₱292,880** |
 
 ---
 
@@ -103,11 +102,11 @@ If the system is adopted for production use beyond the academic context, upgradi
 - **MongoDB Atlas M10** ~₱1,400/month
 - **Render Starter** ~₱1,000/month
 
-### Kiosk Hardware
-The one-time hardware cost of ₱2,000 for a USB 1080p HD camera is a one-time investment. The camera can be reused across multiple kiosks or transferred to production deployment.
+### Laptop/Device Cameras Only
+The system uses built-in laptop or device cameras for face recognition and kiosk scanning, eliminating any hardware camera purchases. This reduces infrastructure costs to nearly zero.
 
 ### Academic Capstone Context
-If this project is submitted as an academic capstone, the human resource line items represent **opportunity cost** rather than actual expenditure. The realistic **out-of-pocket cost** is limited to infrastructure and miscellaneous items, totaling approximately ₱4,400 – ₱6,100 PHP.
+If this project is submitted as an academic capstone, the human resource line items represent **opportunity cost** rather than actual expenditure. The realistic **out-of-pocket cost** is limited to infrastructure and miscellaneous items, totaling approximately ₱2,400 – ₱4,100 PHP.
 
 This means:
 - Team development effort is valued at ₱262,000 but may not require actual payment in an academic setting
@@ -119,13 +118,12 @@ This means:
 **Scenario 1: Pure Academic Development (Free Hosting)**
 - Out-of-pocket: ₱3,500 (internet) + ₱500 (printing) = **₱4,000**
 
-**Scenario 2: Academic with Hardware (1 Kiosk)**
-- Out-of-pocket: ₱2,000 (camera) + ₱4,000 = **₱6,000**
+**Scenario 2: Academic with Optional Domain**
+- Out-of-pocket: ₱700 (domain) + ₱4,000 = **₱4,700**
 
 **Scenario 3: Production Deployment (Paid Hosting)**
 - Monthly infrastructure: ₱1,400 + ₱1,000 = ₱2,400
-- Annual cost (excluding team): ₱28,800
-- Hardware amortized: ₱2,000 one-time
+- Annual cost (excluding team): ₱28,800 + ₱700 (domain) = ₱29,500
 
 ---
 
@@ -133,12 +131,12 @@ This means:
 
 | Phase | Timeline | Primary Costs | Total (PHP) |
 |---|---|---|---|
-| Planning & Setup (Week 1) | Apr 18–21 | Team (50%), Setup (10%) | ₱41,380 |
-| Backend Development (Week 2–3) | Apr 22–May 5 | Team Backend (50%), Hosting setup (50%) | ₱97,550 |
+| Planning & Setup (Week 1) | Apr 18–21 | Team (50%), Setup (10%) | ₱40,800 |
+| Backend Development (Week 2–3) | Apr 22–May 5 | Team Backend (50%), Hosting setup (50%) | ₱96,150 |
 | Frontend Development (Week 2–3) | Apr 22–May 5 | Team Frontend (50%) | ₱75,000 |
-| Testing & QA (Week 4) | May 6–12 | Team QA (80%), Miscellaneous (50%) | ₱28,950 |
-| Deployment & Documentation (Week 4–5) | May 13–28 | Team PM (100%), Hosting (50%), Contingency (100%) | ₱53,800 |
-| **Total** | | | **₱296,680** |
+| Testing & QA (Week 4) | May 6–12 | Team QA (80%), Miscellaneous (50%) | ₱28,430 |
+| Deployment & Documentation (Week 4–5) | May 13–28 | Team PM (100%), Hosting (50%), Contingency (100%) | ₱52,500 |
+| **Total** | | | **₱292,880** |
 
 ---
 
