@@ -319,6 +319,65 @@
   color: #6b7280;
 }
 
+/* Attendance */
+.attendance-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.attendance-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.attendance-date-filter {
+  min-width: 180px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #111827;
+}
+
+.attendance-table th,
+.attendance-table td {
+  text-align: left;
+}
+
+.attendance-table-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.attendance-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.attendance-page-btn {
+  min-width: 100px;
+}
+
+.attendance-page-indicator {
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.attendance-pagination-summary {
+  font-size: 0.9rem;
+  color: #6b7280;
+  text-align: right;
+}
+
 /* Role Badges */
 .role-badge {
   padding: 0.4rem 0.8rem;

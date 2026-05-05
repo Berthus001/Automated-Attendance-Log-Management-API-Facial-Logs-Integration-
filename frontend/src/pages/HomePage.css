@@ -1,0 +1,376 @@
+/* HomePage.css */
+
+.homepage-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Navbar */
+.homepage-navbar {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1.5rem 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #667eea;
+  margin: 0;
+}
+
+.nav-subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin: 0.25rem 0 0 0;
+  flex-grow: 1;
+  margin-left: 1.5rem;
+}
+
+.admin-link-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.admin-link-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Container */
+.homepage-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  min-height: calc(100vh - 140px);
+}
+
+/* Kiosk Section */
+.kiosk-section {
+  background: white;
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 800px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  position: relative;
+}
+
+.kiosk-header h2 {
+  font-size: 2.5rem;
+  color: #2d3748;
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
+}
+
+.kiosk-header p {
+  font-size: 1.25rem;
+  color: #718096;
+  margin: 0 0 2rem 0;
+}
+
+/* Webcam Container */
+.webcam-container {
+  margin: 2rem 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #e2e8f0;
+  border-top: 6px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+  font-size: 1.25rem;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Kiosk Instructions */
+.kiosk-instructions {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f7fafc;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.kiosk-instructions p {
+  font-size: 1rem;
+  color: #4a5568;
+  margin: 0.5rem 0;
+  font-weight: 500;
+}
+
+/* Result Section */
+.result-section {
+  background: white;
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Success Card */
+.success-card {
+  padding: 1rem;
+}
+
+.success-icon {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  color: white;
+  margin: 0 auto 1.5rem;
+  animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.success-title {
+  font-size: 2.5rem;
+  color: #2d3748;
+  margin: 0 0 2rem 0;
+  font-weight: 700;
+}
+
+/* User Details */
+.user-details {
+  background: #f7fafc;
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.highlight-row {
+  background: rgba(102, 126, 234, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+  border: none;
+  margin: 0.5rem 0;
+}
+
+.detail-label {
+  font-size: 1.1rem;
+  color: #718096;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 1.2rem;
+  color: #2d3748;
+  font-weight: 700;
+}
+
+/* Role Badge */
+.role-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-student {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.role-teacher {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+/* Status Badges */
+.status-success {
+  color: #38a169;
+  font-weight: 700;
+}
+
+.status-already {
+  color: #dd6b20;
+  font-weight: 700;
+}
+
+/* Countdown Text */
+.countdown-text {
+  margin-top: 2rem;
+  font-size: 1rem;
+  color: #a0aec0;
+  font-style: italic;
+}
+
+/* Error Card */
+.error-card {
+  padding: 1rem;
+}
+
+.error-icon {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  color: white;
+  margin: 0 auto 1.5rem;
+  animation: shake 0.5s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.error-title {
+  font-size: 2rem;
+  color: #e53e3e;
+  margin: 0 0 1rem 0;
+  font-weight: 700;
+}
+
+.error-message {
+  font-size: 1.25rem;
+  color: #4a5568;
+  margin: 1rem 0;
+  line-height: 1.6;
+}
+
+/* Footer */
+.homepage-footer {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  text-align: center;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.homepage-footer p {
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .nav-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .nav-subtitle {
+    margin-left: 0;
+    text-align: center;
+  }
+
+  .kiosk-section,
+  .result-section {
+    padding: 2rem;
+  }
+
+  .kiosk-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .success-title {
+    font-size: 2rem;
+  }
+
+  .detail-label,
+  .detail-value {
+    font-size: 1rem;
+  }
+}

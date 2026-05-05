@@ -1,0 +1,395 @@
+/* ── Kiosk Scanner Container ─────────────────────────────────────────────── */
+.kiosk-scanner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+/* ── Video wrapper ───────────────────────────────────────────────────────── */
+.kiosk-video-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 4 / 3;
+  background: #0a0a1a;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.kiosk-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  transform: scaleX(-1); /* mirror */
+}
+
+.kiosk-video.visible {
+  opacity: 1;
+}
+
+.kiosk-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: scaleX(-1);
+}
+
+/* ── Status badge ────────────────────────────────────────────────────────── */
+.kiosk-badge {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.kiosk-badge.scanning {
+  background: rgba(0, 0, 0, 0.65);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.kiosk-badge.matching {
+  background: rgba(234, 179, 8, 0.2);
+  color: #fde68a;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+}
+
+.kiosk-badge.cooldown {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Animated pulse dot */
+.badge-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+.badge-pulse.green {
+  background: #34d399;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* Spinner */
+.badge-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(253, 230, 138, 0.3);
+  border-top-color: #fde68a;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Loading overlay ─────────────────────────────────────────────────────── */
+.kiosk-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(10, 10, 26, 0.92);
+  color: #cbd5e1;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+.kiosk-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(99, 102, 241, 0.25);
+  border-top-color: #818cf8;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+/* ── Error overlay ───────────────────────────────────────────────────────── */
+.kiosk-error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(10, 10, 26, 0.92);
+  color: #fca5a5;
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.kiosk-error-icon {
+  font-size: 36px;
+}
+
+/* ── Enrolled count ──────────────────────────────────────────────────────── */
+.kiosk-enrolled-count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.5px;
+}
+
+/* ── Result card ─────────────────────────────────────────────────────────── */
+.kiosk-result-card {
+  width: 100%;
+  max-width: 560px;
+  border-radius: 16px;
+  padding: 28px 32px 24px;
+  text-align: center;
+  animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.kiosk-result-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.12);
+}
+
+/* Time In – green */
+.kiosk-result-timein {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.12);
+}
+
+/* Time Out – indigo/blue */
+.kiosk-result-timeout {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(79, 70, 229, 0.12) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.14);
+}
+
+/* Already completed – amber/warning */
+.kiosk-result-completed {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(217, 119, 6, 0.12) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 4px 24px rgba(245, 158, 11, 0.14);
+}
+
+.kiosk-result-error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  box-shadow: 0 4px 24px rgba(239, 68, 68, 0.12);
+}
+
+.kiosk-result-icon {
+  font-size: 40px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.success-icon   { color: #34d399; }
+.timein-icon    { color: #34d399; }
+.timeout-icon   { color: #818cf8; }
+.completed-icon { color: #fbbf24; font-size: 32px; }
+.error-icon     { color: #f87171; }
+
+.kiosk-result-name {
+  font-size: 26px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 10px;
+}
+
+.kiosk-result-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f87171;
+  margin: 0 0 8px;
+}
+
+.kiosk-result-msg {
+  font-size: 14px;
+  color: #fca5a5;
+  margin: 0;
+}
+
+.kiosk-result-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.kiosk-role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.role-student  { background: rgba(99, 102, 241, 0.25); color: #a5b4fc; }
+.role-teacher  { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; }
+.role-admin    { background: rgba(245, 158, 11, 0.25); color: #fcd34d; }
+
+.kiosk-dept {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.kiosk-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.kiosk-status-row.success    { color: #34d399; }
+.kiosk-status-row.already    { color: #fbbf24; }
+.kiosk-status-row.completed  { color: #fbbf24; }
+
+/* Scan-type badge */
+.kiosk-scan-type-badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-bottom: 14px;
+}
+.badge-timein  { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.badge-timeout { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+
+/* Time In / Time Out row */
+.kiosk-timeinout-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 4px 0 14px;
+}
+
+.timeinout-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.timeinout-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.timeinout-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.timeinout-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.kiosk-timestamp {
+  margin-top: 8px;
+}
+
+.ts-time {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.5px;
+}
+
+.ts-date {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+/* ── Cooldown progress bar ───────────────────────────────────────────────── */
+.kiosk-cooldown-bar-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+}
+
+.kiosk-cooldown-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #34d399, #059669);
+  animation: drainBar linear forwards;
+  transform-origin: left;
+}
+
+@keyframes drainBar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .kiosk-result-name { font-size: 22px; }
+  .ts-time           { font-size: 24px; }
+  .kiosk-result-card { padding: 22px 20px 18px; }
+}

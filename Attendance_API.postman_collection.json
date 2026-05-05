@@ -1,0 +1,858 @@
+{
+  "info": {
+    "name": "Attendance Management API",
+    "description": "Complete API collection for Attendance Log Management with Facial Recognition",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.token) {",
+                  "        pm.collectionVariables.set(\"token\", jsonData.token);",
+                  "        console.log(\"Token saved:\", jsonData.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"eleonor.sarona@admin.com\",\n  \"password\": \"your_password\",\n  \"forceLogin\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Face Login",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\",\n  \"forceLogin\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/face-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "face-login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Enroll Face (2FA)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enroll-face",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enroll-face"]
+            }
+          }
+        },
+        {
+          "name": "Verify Face (2FA)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/face-verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "face-verify"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "student",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "Computer Science",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "john",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "students"]
+            }
+          }
+        },
+        {
+          "name": "Get Teachers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/teachers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "teachers"]
+            }
+          }
+        },
+        {
+          "name": "Get Single User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "507f1f77bcf86cd799439012"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@student.com\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"student\",\n  \"department\": \"Computer Science\",\n  \"studentId\": \"2021-00456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith Updated\",\n  \"department\": \"Software Engineering\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "507f1f77bcf86cd799439012"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "507f1f77bcf86cd799439012"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Enrollment",
+      "item": [
+        {
+          "name": "Get All Enrolled Students",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/enroll",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "enroll"]
+            }
+          }
+        },
+        {
+          "name": "Enroll Student",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"2021-00789\",\n  \"name\": \"Bob Wilson\",\n  \"department\": \"Computer Science\",\n  \"year\": \"2nd Year\",\n  \"section\": \"B\",\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/enroll",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "enroll"]
+            }
+          }
+        },
+        {
+          "name": "Get Enrolled Student",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/enroll/:studentId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "enroll", ":studentId"],
+              "variable": [
+                {
+                  "key": "studentId",
+                  "value": "2021-00123"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Enrolled Student",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob Wilson Updated\",\n  \"year\": \"3rd Year\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/enroll/:studentId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "enroll", ":studentId"],
+              "variable": [
+                {
+                  "key": "studentId",
+                  "value": "2021-00789"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Enrolled Student",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/enroll/:studentId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "enroll", ":studentId"],
+              "variable": [
+                {
+                  "key": "studentId",
+                  "value": "2021-00789"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Face Login & Attendance",
+      "item": [
+        {
+          "name": "Face Login (Log Attendance)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\",\n  \"location\": \"Room 301\",\n  \"device\": \"Entrance Scanner 1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/face-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "face-login"]
+            }
+          }
+        },
+        {
+          "name": "Verify Face (No Log)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/face-login/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "face-login", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Get Student Attendance Stats",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/face-login/stats/:studentId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "face-login", "stats", ":studentId"],
+              "variable": [
+                {
+                  "key": "studentId",
+                  "value": "2021-00123"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance Logs",
+      "item": [
+        {
+          "name": "Log My Attendance",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\",\n  \"location\": \"Room 301\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/logs/log-attendance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs", "log-attendance"]
+            }
+          }
+        },
+        {
+          "name": "Get My Attendance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logs/my-attendance?startDate=2024-03-01&endDate=2024-03-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs", "my-attendance"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-03-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-03-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Logs (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logs?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs"],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "2021-00123",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-03-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-03-31",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Logs Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logs/summary?startDate=2024-03-01&endDate=2024-03-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs", "summary"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-03-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-03-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Logs By Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logs/by-date?date=2024-03-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs", "by-date"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-03-15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "507f1f77bcf86cd799439017"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Log",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "507f1f77bcf86cd799439017"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login Logs",
+      "item": [
+        {
+          "name": "Get All Login Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/login-logs?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login-logs"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "507f1f77bcf86cd799439011",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "admin",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Login Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/login-logs/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login-logs", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get My Login Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/login-logs/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login-logs", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Device Sync",
+      "item": [
+        {
+          "name": "Sync Single Log",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"2021-00123\",\n  \"timeIn\": \"2024-03-15T08:30:00.000Z\",\n  \"timeOut\": \"2024-03-15T17:00:00.000Z\",\n  \"location\": \"Entrance Scanner\",\n  \"deviceId\": \"DEVICE-001\",\n  \"confidence\": 0.95\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/device-sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "device-sync"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Sync Logs",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logs\": [\n    {\n      \"studentId\": \"2021-00123\",\n      \"timeIn\": \"2024-03-15T08:30:00.000Z\",\n      \"location\": \"Entrance\",\n      \"deviceId\": \"DEVICE-001\"\n    },\n    {\n      \"studentId\": \"2021-00456\",\n      \"timeIn\": \"2024-03-15T08:35:00.000Z\",\n      \"location\": \"Entrance\",\n      \"deviceId\": \"DEVICE-001\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/device-sync/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "device-sync", "bulk"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload Single Image",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\",\n  \"type\": \"profile\",\n  \"userId\": \"507f1f77bcf86cd799439012\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload/image",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload", "image"]
+            }
+          }
+        },
+        {
+          "name": "Upload Multiple Images",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images\": [\n    {\n      \"image\": \"data:image/jpeg;base64,...\",\n      \"type\": \"face\"\n    },\n    {\n      \"image\": \"data:image/jpeg;base64,...\",\n      \"type\": \"face\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload", "images"]
+            }
+          }
+        },
+        {
+          "name": "Upload Face Image",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\",\n  \"studentId\": \"2021-00123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload/face",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload", "face"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

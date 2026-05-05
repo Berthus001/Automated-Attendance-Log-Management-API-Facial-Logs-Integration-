@@ -274,6 +274,52 @@ export const getAttendanceLogs = async (filters = {}) => {
 };
 
 /**
+ * Get dashboard attendance records (admin/superadmin)
+ * @param {Object} filters - { role, date }
+ * @returns {Promise} Response from API
+ */
+export const getAttendance = async (filters = {}) => {
+  try {
+    const response = await api.get('/attendance', { params: filters });
+    return response.data;
+  } catch (error) {
+    console.error('Get attendance error:', error);
+    throw error;
+  }
+};
+
+// ========== KIOSK ==========
+
+/**
+ * Get all enrolled users (students/teachers) with face descriptors for kiosk matching
+ * @returns {Promise} Response with user descriptors array
+ */
+export const getKioskDescriptors = async () => {
+  try {
+    const response = await api.get('/kiosk/descriptors');
+    return response.data;
+  } catch (error) {
+    console.error('Get kiosk descriptors error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Record kiosk attendance after client-side face match
+ * @param {Object} data - { userId, image, confidenceScore, deviceId? }
+ * @returns {Promise} Response with attendance result
+ */
+export const recordKioskAttendance = async (data) => {
+  try {
+    const response = await api.post('/kiosk/attendance', data);
+    return response.data;
+  } catch (error) {
+    console.error('Record kiosk attendance error:', error);
+    throw error;
+  }
+};
+
+/**
  * Get attendance statistics
  * @param {string} studentId - Student ID
  * @returns {Promise} Response from API

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import './WebcamWithFaceDetection.css';
 
-const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
+const WebcamWithFaceDetection = ({ onCapture, capturedImage, autoCapture = false }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
@@ -19,6 +19,12 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
   const [detectionCount, setDetectionCount] = useState(0);
   const [isInitializing, setIsInitializing] = useState(true);
   const hasInitializedRef = useRef(false);
+  const stableFaceCountRef = useRef(0);
+  const autoCaptureRef = useRef(autoCapture);
+  const capturedImageRef = useRef(capturedImage);
+  const onCaptureRef = useRef(onCapture);
+  const [autoProgress, setAutoProgress] = useState(0);
+  const AUTO_CAPTURE_THRESHOLD = 20; // 2 seconds at 100ms interval
 
   // Stop camera and release resources - use ref to access stream
   const stopCamera = useCallback(() => {
@@ -85,6 +91,19 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty array - run ONLY on mount
+
+  // Sync prop refs so interval callbacks read latest values without re-creating
+  useEffect(() => { autoCaptureRef.current = autoCapture; }, [autoCapture]);
+  useEffect(() => { capturedImageRef.current = capturedImage; }, [capturedImage]);
+  useEffect(() => { onCaptureRef.current = onCapture; }, [onCapture]);
+
+  // Reset auto-capture progress when capturedImage is cleared (new scan cycle)
+  useEffect(() => {
+    if (!capturedImage) {
+      stableFaceCountRef.current = 0;
+      setAutoProgress(0);
+    }
+  }, [capturedImage]);
 
   // Step 1: Check for available video input devices
   const checkCameraAvailability = async () => {
@@ -219,6 +238,67 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     }
   };
 
+  // Capture frame from video, compress, and convert to base64 JPEG
+  // Defined as stable useCallback (uses only refs) so detectFaces can call it safely
+  const captureImage = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    console.log('📸 Capturing image from webcam...');
+
+    const video = videoRef.current;
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // First, capture full resolution to temp canvas
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Get original size
+    const originalImage = tempCanvas.toDataURL('image/jpeg', 0.95);
+    const originalSize = getBase64SizeInKB(originalImage);
+    console.log(`📊 Original image size: ${originalSize} KB (${tempCanvas.width}x${tempCanvas.height})`);
+
+    // Create optimized canvas with target dimensions (320x240)
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    const targetWidth = 320;
+    const targetHeight = 240;
+    
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    // Draw and resize image to target dimensions
+    context.drawImage(video, 0, 0, targetWidth, targetHeight);
+
+    // Try different quality levels to get under 200KB
+    let quality = 0.7;
+    let compressedImage = canvas.toDataURL('image/jpeg', quality);
+    let sizeKB = getBase64SizeInKB(compressedImage);
+
+    console.log(`🖼️ Initial compression (quality ${quality}): ${sizeKB} KB`);
+
+    // If still too large, reduce quality
+    while (parseFloat(sizeKB) > 200 && quality > 0.3) {
+      quality -= 0.05;
+      compressedImage = canvas.toDataURL('image/jpeg', quality);
+      sizeKB = getBase64SizeInKB(compressedImage);
+      console.log(`🔄 Recompressing (quality ${quality.toFixed(2)}): ${sizeKB} KB`);
+    }
+
+    console.log(`✅ Final image size: ${sizeKB} KB (quality: ${quality.toFixed(2)})`);
+    console.log(`📐 Final dimensions: ${targetWidth}x${targetHeight}`);
+    console.log(`💾 Size reduction: ${((1 - parseFloat(sizeKB) / parseFloat(originalSize)) * 100).toFixed(1)}%`);
+    
+    if (parseFloat(sizeKB) > 200) {
+      console.warn(`⚠️ Image size ${sizeKB} KB exceeds 200KB limit`);
+    }
+
+    if (onCaptureRef.current) {
+      onCaptureRef.current(compressedImage);
+    }
+  }, []); // stable - only uses refs
+
   // Detect faces in real-time and draw bounding boxes
   const detectFaces = useCallback(async () => {
     if (!videoRef.current || !overlayCanvasRef.current || !isModelLoaded) return;
@@ -311,10 +391,32 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
         ctx.fillText('No face detected', 20, 35);
       }
 
+      // Auto-capture: trigger after face is stably detected for AUTO_CAPTURE_THRESHOLD frames
+      if (autoCaptureRef.current && !capturedImageRef.current) {
+        if (hasFace) {
+          stableFaceCountRef.current += 1;
+          const progress = Math.min(
+            (stableFaceCountRef.current / AUTO_CAPTURE_THRESHOLD) * 100,
+            100
+          );
+          setAutoProgress(progress);
+          if (stableFaceCountRef.current >= AUTO_CAPTURE_THRESHOLD) {
+            stableFaceCountRef.current = 0;
+            setAutoProgress(0);
+            captureImage();
+          }
+        } else {
+          if (stableFaceCountRef.current !== 0) {
+            stableFaceCountRef.current = 0;
+            setAutoProgress(0);
+          }
+        }
+      }
+
     } catch (err) {
       console.error('Face detection error:', err);
     }
-  }, [isModelLoaded]);
+  }, [isModelLoaded, captureImage]);
 
   // Start real-time face detection
   const startDetection = useCallback(() => {
@@ -343,69 +445,6 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
     // Calculate size: base64 length * 0.75 / 1024
     const sizeInKB = (base64Data.length * 0.75) / 1024;
     return sizeInKB.toFixed(2);
-  };
-
-  // Capture frame from video, compress, and convert to base64 JPEG
-  const captureImage = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    console.log('📸 Capturing image from webcam...');
-
-    const video = videoRef.current;
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-
-    // First, capture full resolution to temp canvas
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-
-    // Get original size
-    const originalImage = tempCanvas.toDataURL('image/jpeg', 0.95);
-    const originalSize = getBase64SizeInKB(originalImage);
-    console.log(`📊 Original image size: ${originalSize} KB (${tempCanvas.width}x${tempCanvas.height})`);
-
-    // Create optimized canvas with target dimensions (320x240)
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    const targetWidth = 320;
-    const targetHeight = 240;
-    
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-
-    // Draw and resize image to target dimensions
-    context.drawImage(video, 0, 0, targetWidth, targetHeight);
-
-    // Try different quality levels to get under 200KB
-    let quality = 0.7;
-    let compressedImage = canvas.toDataURL('image/jpeg', quality);
-    let sizeKB = getBase64SizeInKB(compressedImage);
-
-    console.log(`🖼️ Initial compression (quality ${quality}): ${sizeKB} KB`);
-
-    // If still too large, reduce quality
-    while (parseFloat(sizeKB) > 200 && quality > 0.3) {
-      quality -= 0.05;
-      compressedImage = canvas.toDataURL('image/jpeg', quality);
-      sizeKB = getBase64SizeInKB(compressedImage);
-      console.log(`🔄 Recompressing (quality ${quality.toFixed(2)}): ${sizeKB} KB`);
-    }
-
-    // Final log
-    console.log(`✅ Final image size: ${sizeKB} KB (quality: ${quality.toFixed(2)})`);
-    console.log(`📐 Final dimensions: ${targetWidth}x${targetHeight}`);
-    console.log(`💾 Size reduction: ${((1 - parseFloat(sizeKB) / parseFloat(originalSize)) * 100).toFixed(1)}%`);
-    
-    // Warn if still over 200KB
-    if (parseFloat(sizeKB) > 200) {
-      console.warn(`⚠️ Image size ${sizeKB} KB exceeds 200KB limit`);
-    }
-
-    // Return compressed image via callback
-    if (onCapture) {
-      onCapture(compressedImage);
-    }
   };
 
   // Retake photo (clear captured image)
@@ -548,9 +587,29 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage }) => {
       {/* Control buttons */}
       <div className="webcam-controls">
         {capturedImage ? (
-          <button onClick={retakePhoto} className="btn btn-retake">
-            Retake Photo
-          </button>
+          !autoCapture && (
+            <button onClick={retakePhoto} className="btn btn-retake">
+              Retake Photo
+            </button>
+          )
+        ) : autoCapture ? (
+          <div className="auto-capture-status">
+            {isCameraReady && isModelLoaded && !cameraError && !modelError ? (
+              faceDetected ? (
+                <div className="auto-capture-progress">
+                  <p className="auto-capture-label">Hold still... scanning</p>
+                  <div className="progress-bar-track">
+                    <div
+                      className="progress-bar-fill"
+                      style={{ width: `${autoProgress}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="auto-capture-waiting">👤 Position your face in the frame</p>
+              )
+            ) : null}
+          </div>
         ) : (
           <button 
             onClick={captureImage} 

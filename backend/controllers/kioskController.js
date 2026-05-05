@@ -1,0 +1,164 @@
+const User = require('../models/User.model');
+const AttendanceLog = require('../models/AttendanceLog.model');
+const { processBase64Image } = require('../utils/imageProcessor');
+
+// @desc    Get all enrolled users (students/teachers) with face descriptors for kiosk matching
+// @route   GET /api/kiosk/descriptors
+// @access  Public (kiosk device only – no sensitive auth data is returned)
+exports.getKioskDescriptors = async (req, res) => {
+  try {
+    const users = await User.find({
+      role: { $in: ['student', 'teacher'] },
+      isActive: true,
+      faceDescriptor: { $exists: true, $not: { $size: 0 } },
+    }).select('_id name role department faceDescriptor createdBy');
+
+    const descriptors = users.map((u) => ({
+      _id: u._id,
+      name: u.name,
+      role: u.role,
+      department: u.department || '',
+      faceDescriptor: u.faceDescriptor,
+      createdBy: u.createdBy || null,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: descriptors.length,
+      data: descriptors,
+    });
+  } catch (error) {
+    console.error('getKioskDescriptors error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Record attendance from kiosk after client-side face match
+// @route   POST /api/kiosk/attendance
+// @access  Public (kiosk device – validated by userId existence)
+exports.recordKioskAttendance = async (req, res) => {
+  try {
+    const { userId, image, confidenceScore } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'userId is required' });
+    }
+
+    // Validate user exists and is an active student/teacher
+    const user = await User.findOne({
+      _id: userId,
+      role: { $in: ['student', 'teacher'] },
+      isActive: true,
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found or not eligible for kiosk attendance',
+      });
+    }
+
+    const now = new Date();
+
+    // Today's date range
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existing = await AttendanceLog.findOne({
+      userId: user._id,
+      timestamp: { $gte: startOfDay, $lte: endOfDay },
+    });
+
+    // ── THIRD SCAN (or beyond) ──────────────────────────────────────────────
+    if (existing && existing.scanCount >= 2) {
+      return res.status(400).json({
+        success: false,
+        scanType: 'completed',
+        message: 'Attendance already completed for today',
+        data: {
+          userId: user._id,
+          name: user.name,
+          role: user.role,
+          department: user.department || '',
+          timeIn: existing.timeIn,
+          timeOut: existing.timeOut,
+        },
+      });
+    }
+
+    // ── SECOND SCAN (time-out) ──────────────────────────────────────────────
+    if (existing && existing.scanCount === 1) {
+      existing.timeOut = now;
+      existing.scanCount = 2;
+      await existing.save();
+
+      return res.status(200).json({
+        success: true,
+        scanType: 'time-out',
+        message: `Time Out recorded for ${user.name}`,
+        data: {
+          userId: user._id,
+          name: user.name,
+          role: user.role,
+          department: user.department || '',
+          timeIn: existing.timeIn,
+          timeOut: existing.timeOut,
+          timestamp: existing.timestamp,
+        },
+      });
+    }
+
+    // ── FIRST SCAN (time-in) ────────────────────────────────────────────────
+    // Save attendance image if provided
+    let imagePath = null;
+    if (image) {
+      try {
+        const imageResult = await processBase64Image(image, {
+          maxWidth: 300,
+          quality: 70,
+          format: 'jpeg',
+          subfolder: 'attendance',
+        });
+        imagePath = imageResult.filePath;
+      } catch (imgErr) {
+        console.error('Failed to save attendance image:', imgErr.message);
+      }
+    }
+
+    const attendanceLog = await AttendanceLog.create({
+      userId: user._id,
+      userRole: user.role,
+      userName: user.name,
+      timestamp: now,
+      timeIn: now,
+      timeOut: null,
+      scanCount: 1,
+      imagePath,
+      confidenceScore: typeof confidenceScore === 'number' ? confidenceScore : null,
+      status: 'present',
+      deviceId: req.body.deviceId || 'kiosk',
+      location: req.body.location || undefined,
+      createdBy: user.createdBy || null,
+    });
+
+    return res.status(201).json({
+      success: true,
+      scanType: 'time-in',
+      message: `Time In recorded for ${user.name}`,
+      data: {
+        userId: user._id,
+        name: user.name,
+        role: user.role,
+        department: user.department || '',
+        timeIn: attendanceLog.timeIn,
+        timeOut: null,
+        timestamp: attendanceLog.timestamp,
+      },
+    });
+  } catch (error) {
+    console.error('recordKioskAttendance error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

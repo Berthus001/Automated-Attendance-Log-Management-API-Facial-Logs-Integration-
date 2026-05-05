@@ -1,7 +1,9 @@
 const User = require('../models/User.model');
 const LoginLog = require('../models/LoginLog.model');
+const AttendanceLog = require('../models/AttendanceLog.model');
 const jwt = require('jsonwebtoken');
 const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
+const { processBase64Image } = require('../utils/imageProcessor');
 
 // @desc    Login user (superadmin/admin only)
 // @route   POST /api/auth/login
@@ -452,6 +454,20 @@ exports.faceLogin = async (req, res) => {
     matchedUser.lastLoginAt = now;
     await matchedUser.save();
 
+    // Check if attendance already logged today
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingAttendance = await AttendanceLog.findOne({
+      userId: matchedUser._id,
+      timestamp: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+    });
+
     // Log the login
     try {
       await LoginLog.create({
@@ -464,6 +480,59 @@ exports.faceLogin = async (req, res) => {
     } catch (logError) {
       console.error('Failed to create login log:', logError.message);
       // Don't fail the login if logging fails
+    }
+
+    // Create attendance log for students and teachers
+    let attendanceLogData = null;
+    let alreadyLoggedToday = false;
+
+    if (existingAttendance) {
+      // Attendance already logged today
+      alreadyLoggedToday = true;
+      attendanceLogData = {
+        id: existingAttendance._id,
+        timestamp: existingAttendance.timestamp,
+        status: existingAttendance.status,
+        alreadyLogged: true,
+      };
+      console.log(`Attendance already logged today for ${matchedUser.name} (${matchedUser.role})`);
+    } else {
+      // Create new attendance record
+      try {
+        // Process and save attendance image
+        const imageResult = await processBase64Image(image, {
+          maxWidth: 300,
+          quality: 70,
+          format: 'jpeg',
+          subfolder: 'attendance',
+        });
+
+        // Create attendance record
+        const attendanceLog = await AttendanceLog.create({
+          userId: matchedUser._id,
+          userRole: matchedUser.role,
+          userName: matchedUser.name,
+          timestamp: now,
+          imagePath: imageResult.filePath,
+          deviceId: req.body.deviceId || null,
+          confidenceScore: 1 - bestMatch.distance,
+          status: 'present',
+          location: req.body.location || undefined,
+          createdBy: matchedUser.createdBy || null,
+        });
+
+        attendanceLogData = {
+          id: attendanceLog._id,
+          timestamp: attendanceLog.timestamp,
+          status: attendanceLog.status,
+          alreadyLogged: false,
+        };
+
+        console.log(`Attendance logged for ${matchedUser.name} (${matchedUser.role})`);
+      } catch (attendanceError) {
+        console.error('Failed to create attendance log:', attendanceError.message);
+        // Don't fail the login if attendance logging fails
+      }
     }
 
     // Generate JWT token
@@ -480,9 +549,13 @@ exports.faceLogin = async (req, res) => {
     );
 
     // Return success response with token
+    const successMessage = alreadyLoggedToday 
+      ? 'Face recognized. You have already logged attendance today.'
+      : 'Face login successful. Attendance recorded.';
+
     res.status(200).json({
       success: true,
-      message: 'Face login successful',
+      message: successMessage,
       token,
       user: {
         id: matchedUser._id,
@@ -490,6 +563,7 @@ exports.faceLogin = async (req, res) => {
         email: matchedUser.email,
         role: matchedUser.role,
       },
+      attendance: attendanceLogData,
       confidence: {
         distance: bestMatch.distance,
         threshold: matchThreshold,
