@@ -5,6 +5,24 @@ import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
 import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance } from '../services/api';
 import './SuperAdminDashboard.css';
 
+const formatLocalTime = (isoString) => {
+  if (!isoString) return '—';
+  return new Date(isoString).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
+const formatLocalDate = (isoString) => {
+  if (!isoString) return '—';
+  return new Date(isoString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
@@ -630,11 +648,11 @@ const SuperAdminDashboard = () => {
                         {log.role}
                       </span>
                     </td>
-                    <td>{log.date}</td>
-                    <td>{log.timeInFormatted || log.time || '—'}</td>
+                    <td>{formatLocalDate(log.timeIn || log.timestamp)}</td>
+                    <td>{formatLocalTime(log.timeIn || log.timestamp)}</td>
                     <td>
-                      {log.timeOutFormatted
-                        ? log.timeOutFormatted
+                      {log.timeOut
+                        ? formatLocalTime(log.timeOut)
                         : <span className="time-pending">—</span>}
                     </td>
                   </tr>
