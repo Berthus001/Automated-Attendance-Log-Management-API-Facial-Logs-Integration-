@@ -5,26 +5,26 @@
 
 | ID | Risk | Category | Likelihood | Impact | Severity | Mitigation Strategy |
 |---|---|---|---|---|---|---|
-| R01 | MongoDB Atlas connection failure in production | Technical | Low | Critical | Critical | Use MongoDB Atlas cluster with automatic failover; configure connection retries with exponential backoff; validate MONGODB_URI on startup and exit with clear error if missing |
-| R02 | JWT secret key exposure | Security | Low | Critical | Critical | Store JWT_SECRET in .env only; never commit to GitHub; enforce .gitignore rules; use strong random secret (32+ characters) |
-| R03 | Face recognition accuracy issues (false positives/negatives) | Technical | Medium | High | High | Set strict matching threshold (0.45) on both frontend and backend; conduct face enrollment quality checks; re-verify face on server before recording attendance |
-| R04 | Kiosk hardware or camera failure | Operational | Medium | High | High | Provide fallback manual check-in option via admin dashboard; regularly test camera on kiosk; have spare USB camera available; log all kiosk errors for diagnosis |
-| R05 | Frontend-backend CORS misconfiguration in production | Technical | Medium | High | High | Set FRONTEND_URL env variable correctly; test CORS headers before deployment; validate preflight OPTIONS requests work; allow all necessary headers and methods |
-| R06 | Data loss due to missing database backups | Operational | Low | Critical | Critical | Enable automated backups on MongoDB Atlas (daily snapshots); document manual backup procedure; test restore process quarterly; store backups in multiple regions |
-| R07 | Unauthorized access due to role bypass in kiosk or admin panel | Security | Low | Critical | Critical | Enforce protect middleware for JWT validation on all protected routes; implement allowRoles middleware for role-based access; test each role's boundary access; prevent admin/superadmin from kiosk attendance endpoint |
-| R08 | Attendance duplicate records from multiple rapid scans | Data Integrity | Low | Medium | Medium | Implement unique compound index on (userId, timestamp date); validate scanCount on server before recording; reject duplicate time-in requests same day |
-| R09 | Face image storage failure or large storage costs | Operational | Medium | Medium | Medium | Compress attendance images to 70% quality and max 300px width using Sharp; store in organized folder structure; implement cleanup routine for old images (90+ days) |
-| R10 | Network connectivity loss on kiosk during attendance sync | Technical | Medium | High | High | Implement client-side queue for offline attendance attempts; retry failed requests with exponential backoff when connection restored; display clear offline/online status to user |
-| R11 | Admin/Superadmin face descriptor corruption or loss | Data Integrity | Low | Medium | Medium | Validate face descriptor array length before storage; implement face re-enrollment workflow for corrupted records; backup face descriptor separately from attendance logs |
-| R12 | Webcam permission denial on browser or device | Technical | Medium | Low | Low | Prompt user to enable camera permission on first load; provide clear browser-specific instructions; fallback to manual admin creation without self-enrollment |
-| R13 | Performance degradation with large user base (1000+ users) | Performance | Low | Medium | Low | Add indexes on frequently queried fields (role, isActive, createdBy); implement pagination for user lists and attendance logs; defer complex aggregations to off-peak hours |
-| R14 | Face-api.js browser incompatibility or library issues | Technical | Low | Medium | Medium | Test face-api on Chrome, Firefox, Edge, and Safari before deployment; use WebAssembly WASM backend for better performance; monitor GitHub for security updates; have fallback library identified |
-| R15 | Production environment differs from development (env variables, ports, URLs) | Technical | Medium | Medium | Medium | Use .env files for all configuration; document all required env variables in deployment guide; test production build locally before deploying; validate all URLs at startup |
-| R16 | Attendance records for deleted users cause orphaned references | Data Integrity | Low | Low | Low | Populate userId reference in attendance logs; delete cascades attendance logs when user deleted; document retention policy for deleted user records |
-| R17 | Session timeout or JWT expiration during long admin operations | Technical | Medium | Low | Low | Set JWT_EXPIRE to 7 days for extended access; implement token refresh endpoint; display expiration warning 10 minutes before logout; gracefully redirect to login on 401 |
-| R18 | Admin creates duplicate user accounts with same email | Data Integrity | Low | Medium | Medium | Enforce unique email index on User model; catch duplicate key error and display clear message; prevent rapid successive user creation without validation |
-| R19 | False face match due to similar faces in system | Technical | Medium | Medium | Medium | Increase matching threshold if false matches occur; implement manual review process for borderline matches (0.40–0.50); train on diverse face datasets |
-| R20 | Deployment to Render or Vercel fails silently | Technical | Low | High | High | Test deployment build locally; configure CI/CD pre-deployment checks; monitor Render backend and Vercel frontend logs post-deployment; have manual rollback plan |
+| R01 | MongoDB Atlas connection failure in production | Technical | Low | Critical | Critical | MongoDB Atlas with automatic failover; connection retries on startup |
+| R02 | JWT secret key exposure | Security | Low | Critical | Critical | Store JWT_SECRET in .env; enforce .gitignore; use strong random secret |
+| R03 | Face recognition accuracy issues (false positives/negatives) | Technical | Medium | High | High | Strict threshold 0.45; quality checks; server-side re-verification |
+| R04 | Kiosk hardware or camera failure | Operational | Medium | High | High | Manual fallback via admin dashboard; test camera regularly; spare USB camera |
+| R05 | Frontend-backend CORS misconfiguration in production | Technical | Medium | High | High | Set FRONTEND_URL env correctly; test CORS headers before deployment |
+| R06 | Data loss due to missing database backups | Operational | Low | Critical | Critical | MongoDB Atlas automated daily backups; quarterly restore testing |
+| R07 | Unauthorized access due to role bypass in kiosk or admin panel | Security | Low | Critical | Critical | protect & allowRoles middleware on all routes; test role boundaries; block admin from kiosk |
+| R08 | Attendance duplicate records from multiple rapid scans | Data Integrity | Low | Medium | Medium | Unique compound index (userId, timestamp); validate scanCount |
+| R09 | Face image storage failure or large storage costs | Operational | Medium | Medium | Medium | Compress images (70% quality, 300px); cleanup routine (90+ days) |
+| R10 | Network connectivity loss on kiosk during attendance sync | Technical | Medium | High | High | Client-side queue for offline; retry with backoff; show status |
+| R11 | Admin/Superadmin face descriptor corruption or loss | Data Integrity | Low | Medium | Medium | Validate descriptor array length; re-enrollment workflow for corrupted records |
+| R12 | Webcam permission denial on browser or device | Technical | Medium | Low | Low | Prompt camera permission; provide instructions; manual fallback |
+| R13 | Performance degradation with large user base (1000+ users) | Performance | Low | Medium | Low | Add indexes; implement pagination; defer aggregations |
+| R14 | Face-api.js browser incompatibility or library issues | Technical | Low | Medium | Medium | Test on all browsers; use WASM backend; monitor for updates |
+| R15 | Production environment differs from development (env variables, ports, URLs) | Technical | Medium | Medium | Medium | .env for all config; test build locally before deployment |
+| R16 | Attendance records for deleted users cause orphaned references | Data Integrity | Low | Low | Low | Populate userId reference; cascade delete on user deletion |
+| R17 | Session timeout or JWT expiration during long admin operations | Technical | Medium | Low | Low | JWT_EXPIRE 7 days; token refresh endpoint; expiration warning |
+| R18 | Admin creates duplicate user accounts with same email | Data Integrity | Low | Medium | Medium | Unique email index; catch & display duplicate errors |
+| R19 | False face match due to similar faces in system | Technical | Medium | Medium | Medium | Adjust threshold if needed; manual review for borderline matches |
+| R20 | Deployment to Render or Vercel fails silently | Technical | Low | High | High | Test build locally; pre-deployment checks; monitor logs; rollback plan |
 
 ---
 
