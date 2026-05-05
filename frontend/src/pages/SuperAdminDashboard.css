@@ -348,6 +348,11 @@
   text-align: left;
 }
 
+.time-pending {
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .attendance-table-wrapper {
   display: flex;
   flex-direction: column;

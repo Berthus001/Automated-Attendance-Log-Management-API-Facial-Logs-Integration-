@@ -617,7 +617,8 @@ const SuperAdminDashboard = () => {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Date</th>
-                  <th>Time</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
                 </tr>
               </thead>
               <tbody>
@@ -630,7 +631,12 @@ const SuperAdminDashboard = () => {
                       </span>
                     </td>
                     <td>{log.date}</td>
-                    <td>{log.time}</td>
+                    <td>{log.timeInFormatted || log.time || '—'}</td>
+                    <td>
+                      {log.timeOutFormatted
+                        ? log.timeOutFormatted
+                        : <span className="time-pending">—</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
