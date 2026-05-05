@@ -1,8 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import KioskScanner from '../components/KioskScanner';
 import './HomePage.css';
 
 const HomePage = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="homepage-wrapper">
       {/* Header */}
@@ -10,6 +13,12 @@ const HomePage = () => {
         <div className="nav-container">
           <h1 className="nav-logo">🎓 Attendance System</h1>
           <p className="nav-subtitle">Face Recognition Kiosk</p>
+          <button
+            className="admin-link-btn"
+            onClick={() => navigate('/admin-login')}
+          >
+            👤 Admin Login
+          </button>
         </div>
       </nav>
 
