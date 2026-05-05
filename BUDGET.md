@@ -99,22 +99,33 @@ For demonstration and academic purposes, the system can be fully deployed at zer
 - **Vercel free tier** (frontend hosting)
 
 ### Scalability Path
-If the system is adopted for production use beyond the academic context, upgrading to paid hosting tiers provides improved performance:
+If the system is adopted for production use beyond the academic context, upgrading to paid hosting tiers provides significantly improved performance and uptime guarantees:
 - **MongoDB Atlas M10** ~₱1,400/month
 - **Render Starter** ~₱1,000/month
 
 ### Kiosk Hardware
-The one-time hardware cost of ₱2,000 for a USB 1080p HD camera is a one-time investment. The camera can be reused across multiple kiosks or transferred to production.
+The one-time hardware cost of ₱2,000 for a USB 1080p HD camera is a one-time investment. The camera can be reused across multiple kiosks or transferred to production deployment.
 
-### Academic Context
-If this project is submitted as an academic capstone, the human resource line items represent **opportunity cost** rather than actual expenditure. The realistic **out-of-pocket cost** is limited to:
-- Infrastructure: ₱3,550 (if no free tier)
-- Miscellaneous: ₱4,300 (excluding contingency)
-- **Realistic production-ready deployment cost: ₱7,850 – ₱9,050 PHP**
+### Academic Capstone Context
+If this project is submitted as an academic capstone, the human resource line items represent **opportunity cost** rather than actual expenditure. The realistic **out-of-pocket cost** is limited to infrastructure and miscellaneous items, totaling approximately ₱4,400 – ₱6,100 PHP.
 
-### Alternative: Zero-Cost Development
-If using only free hosting tiers and existing workstations:
-- **Development-only cost: ₱3,500 (internet) + ₱500 (printing) = ₱4,000 PHP**
+This means:
+- Team development effort is valued at ₱262,000 but may not require actual payment in an academic setting
+- Only hardware, hosting, and materials need to be funded
+- The system is production-ready with minimal cash investment
+
+### Cost Breakdown for Different Scenarios
+
+**Scenario 1: Pure Academic Development (Free Hosting)**
+- Out-of-pocket: ₱3,500 (internet) + ₱500 (printing) = **₱4,000**
+
+**Scenario 2: Academic with Hardware (1 Kiosk)**
+- Out-of-pocket: ₱2,000 (camera) + ₱4,000 = **₱6,000**
+
+**Scenario 3: Production Deployment (Paid Hosting)**
+- Monthly infrastructure: ₱1,400 + ₱1,000 = ₱2,400
+- Annual cost (excluding team): ₱28,800
+- Hardware amortized: ₱2,000 one-time
 
 ---
 
