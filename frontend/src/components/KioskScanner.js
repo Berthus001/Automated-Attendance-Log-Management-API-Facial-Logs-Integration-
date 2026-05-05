@@ -22,6 +22,7 @@ const KioskScanner = () => {
   const streamRef = useRef(null);
   const detectionTimerRef = useRef(null);
   const faceMatcherRef = useRef(null);
+  const startDetectionRef = useRef(null);
   const isDetectingRef = useRef(false); // prevent overlapping detections
 
   const [status, setStatus] = useState('loading'); // loading | ready | scanning | matching | result | cooldown | error
@@ -123,9 +124,11 @@ const KioskScanner = () => {
     setTimeout(() => {
       setResult(null);
       clearOverlay();
-      startDetection(faceMatcher);
+      if (startDetectionRef.current) {
+        startDetectionRef.current(faceMatcher);
+      }
     }, delayMs);
-  }, [clearOverlay, startDetection]);
+  }, [clearOverlay]);
 
   // ─── Cooldown timer ─────────────────────────────────────────────────────────
   const startCooldown = useCallback((resumeCallback) => {
@@ -310,6 +313,10 @@ const KioskScanner = () => {
     stopDetection,
     withTimeout,
   ]);
+
+  useEffect(() => {
+    startDetectionRef.current = startDetection;
+  }, [startDetection]);
 
   // ─── Initialization ──────────────────────────────────────────────────────────
   useEffect(() => {
