@@ -65,14 +65,7 @@ The Superadmin logs in using **email and password** (not face login).
 
 **Step 4.** Click the **"Login"** button.
 
-**Step 5 (Two-Factor Authentication).** If your account has a face enrolled, the system will prompt you to verify your identity with your face:
-- Allow camera access when the browser asks
-- Position your face clearly in front of the camera
-- Click **"Capture & Verify"**
-- The system will match your face against your stored descriptor
-- If verified, you will be redirected to the dashboard
-
-**Step 6.** Upon successful login, you will be taken to the **Superadmin Dashboard**.
+**Step 5.** Upon successful login, you will be taken to the **Superadmin Dashboard**.
 
 ### Already Logged In on Another Device?
 
