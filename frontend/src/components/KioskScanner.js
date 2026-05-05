@@ -7,8 +7,12 @@ import './KioskScanner.css';
 const DETECTION_INTERVAL_MS = 500;
 // Cooldown after any scan (5 seconds – prevents duplicate scans)
 const COOLDOWN_SECONDS = 5;
-// Face match threshold (lower = stricter)
-const MATCH_THRESHOLD = 0.55;
+// Face match threshold (strict: distance must be < 0.45)
+const MATCH_THRESHOLD = 0.45;
+// Force-reset blocked/error states quickly to prevent UI from getting stuck
+const ERROR_RESET_MS = 3000;
+// Guard API call so "Identifying..." cannot stay forever on network issues
+const API_TIMEOUT_MS = 8000;
 // CDN for face-api models
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
 
@@ -106,6 +110,23 @@ const KioskScanner = () => {
     }
   }, []);
 
+  const withTimeout = useCallback((promise, ms, timeoutMessage) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(timeoutMessage)), ms);
+      }),
+    ]);
+  }, []);
+
+  const resumeScanningAfterDelay = useCallback((faceMatcher, delayMs = ERROR_RESET_MS) => {
+    setTimeout(() => {
+      setResult(null);
+      clearOverlay();
+      startDetection(faceMatcher);
+    }, delayMs);
+  }, [clearOverlay, startDetection]);
+
   // ─── Cooldown timer ─────────────────────────────────────────────────────────
   const startCooldown = useCallback((resumeCallback) => {
     setStatus('cooldown');
@@ -172,10 +193,13 @@ const KioskScanner = () => {
         // Step 3: Compare descriptor with all enrolled users
         const match = faceMatcher.findBestMatch(fullDetection.descriptor);
 
-        if (match.label === 'unknown') {
-          // No match – show unknown briefly, keep scanning
+        if (match.label === 'unknown' || match.distance >= MATCH_THRESHOLD) {
+          // Unknown face: surface feedback then auto-resume scanning.
+          stopDetection();
           drawOverlay([fullDetection], '#ff4444');
-          setStatus('scanning');
+          setResult({ error: 'Unknown face. Please try again.' });
+          setStatus('result');
+          resumeScanningAfterDelay(faceMatcher);
           isDetectingRef.current = false;
           return;
         }
@@ -183,17 +207,31 @@ const KioskScanner = () => {
         // Step 4: Match found – stop detection loop and record attendance
         stopDetection();
         const userData = JSON.parse(match.label);
+
+        // Role-aware gate before API call: kiosk is only for students/teachers.
+        if (userData.role !== 'student' && userData.role !== 'teacher') {
+          setResult({
+            error: 'Access denied: Not allowed for attendance',
+            name: userData.name,
+            role: userData.role,
+          });
+          setStatus('result');
+          resumeScanningAfterDelay(faceMatcher);
+          isDetectingRef.current = false;
+          return;
+        }
+
         const confidenceScore = 1 - match.distance;
         const capturedImage = captureFrame();
 
         setStatus('matching');
 
         try {
-          const response = await recordKioskAttendance({
+          const response = await withTimeout(recordKioskAttendance({
             userId: userData._id,
             image: capturedImage,
             confidenceScore,
-          });
+          }), API_TIMEOUT_MS, 'Attendance request timed out');
 
           setResult({
             name: response.data?.name || userData.name,
@@ -204,9 +242,33 @@ const KioskScanner = () => {
             timeOut: response.data?.timeOut ? new Date(response.data.timeOut) : null,
           });
           setStatus('result');
+
+          // Success path keeps normal cooldown behavior.
+          startCooldown(() => {
+            clearOverlay();
+            startDetection(faceMatcher);
+          });
         } catch (apiErr) {
+          const statusCode = apiErr.response?.status;
           const errData = apiErr.response?.data;
-          // 'completed' is a known business state, not a technical error
+
+          // Strictly reject unauthorized/non-kiosk roles (admin/superadmin).
+          if (
+            statusCode === 403 ||
+            /admin|superadmin|not eligible|not allowed/i.test(errData?.message || '')
+          ) {
+            setResult({
+              error: 'Access denied: Not allowed for attendance',
+              name: userData.name,
+              role: userData.role,
+            });
+            setStatus('result');
+            resumeScanningAfterDelay(faceMatcher);
+            isDetectingRef.current = false;
+            return;
+          }
+
+          // 'completed' is a known business state; show then auto-resume.
           if (errData?.scanType === 'completed') {
             setResult({
               name: errData.data?.name || userData.name,
@@ -216,18 +278,22 @@ const KioskScanner = () => {
               timeIn: errData.data?.timeIn ? new Date(errData.data.timeIn) : null,
               timeOut: errData.data?.timeOut ? new Date(errData.data.timeOut) : null,
             });
+            setStatus('result');
+            resumeScanningAfterDelay(faceMatcher);
+            isDetectingRef.current = false;
+            return;
           } else {
-            const msg = errData?.message || 'Failed to record attendance';
+            const backendMessage = errData?.message || '';
+            const msg = /already completed/i.test(backendMessage)
+              ? 'Attendance already completed for today'
+              : backendMessage || 'Failed to record attendance';
             setResult({ error: msg, name: userData.name, role: userData.role });
+            setStatus('result');
+            resumeScanningAfterDelay(faceMatcher);
+            isDetectingRef.current = false;
+            return;
           }
-          setStatus('result');
         }
-
-        // Start cooldown then resume scanning
-        startCooldown(() => {
-          clearOverlay();
-          startDetection(faceMatcher);
-        });
       } catch (err) {
         console.error('Detection error:', err);
         setStatus('scanning');
@@ -235,7 +301,15 @@ const KioskScanner = () => {
         isDetectingRef.current = false;
       }
     }, DETECTION_INTERVAL_MS);
-  }, [captureFrame, clearOverlay, drawOverlay, startCooldown, stopDetection]);
+  }, [
+    captureFrame,
+    clearOverlay,
+    drawOverlay,
+    resumeScanningAfterDelay,
+    startCooldown,
+    stopDetection,
+    withTimeout,
+  ]);
 
   // ─── Initialization ──────────────────────────────────────────────────────────
   useEffect(() => {

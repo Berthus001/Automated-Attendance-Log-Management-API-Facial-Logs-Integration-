@@ -1,6 +1,9 @@
 const User = require('../models/User.model');
 const AttendanceLog = require('../models/AttendanceLog.model');
 const { processBase64Image } = require('../utils/imageProcessor');
+const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
+
+const KIOSK_MATCH_THRESHOLD = 0.45;
 
 // @desc    Get all enrolled users (students/teachers) with face descriptors for kiosk matching
 // @route   GET /api/kiosk/descriptors
@@ -44,17 +47,61 @@ exports.recordKioskAttendance = async (req, res) => {
       return res.status(400).json({ success: false, message: 'userId is required' });
     }
 
-    // Validate user exists and is an active student/teacher
-    const user = await User.findOne({
-      _id: userId,
-      role: { $in: ['student', 'teacher'] },
-      isActive: true,
-    });
+    if (!image) {
+      return res.status(400).json({ success: false, message: 'image is required for attendance verification' });
+    }
+
+    // Validate user exists first so role rejection can be explicit.
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found or not eligible for kiosk attendance',
+        message: 'User not found',
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is deactivated',
+      });
+    }
+
+    if (user.role !== 'student' && user.role !== 'teacher') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Not allowed for attendance',
+      });
+    }
+
+    if (!Array.isArray(user.faceDescriptor) || user.faceDescriptor.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No enrolled face descriptor found for this user',
+      });
+    }
+
+    // Server-side re-verification prevents incorrect/fallback client-side matches.
+    const faceResult = await extractFaceDescriptorFromBase64(image);
+    if (!faceResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: faceResult.message,
+        error: faceResult.error,
+        faceCount: faceResult.faceCount,
+      });
+    }
+
+    const comparison = compareFaces(user.faceDescriptor, faceResult.descriptor, KIOSK_MATCH_THRESHOLD);
+    if (!comparison.isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Face not recognized. No matching user found.',
+        confidence: {
+          distance: comparison.distance,
+          threshold: KIOSK_MATCH_THRESHOLD,
+        },
       });
     }
 

@@ -65,11 +65,6 @@ const attendanceLogSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
-    status: {
-      type: String,
-      enum: ['present', 'late', 'absent'],
-      default: 'present',
-    },
     confidenceScore: {
       type: Number,
       min: 0,
