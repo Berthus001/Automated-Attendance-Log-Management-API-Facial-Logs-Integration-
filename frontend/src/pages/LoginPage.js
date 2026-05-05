@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
 import { adminLogin, enrollFace2FA, faceOnlyLogin, verifyFace2FA } from '../services/api';
@@ -30,6 +30,18 @@ const LoginPage = () => {
   const [pendingLoginData, setPendingLoginData] = useState(null);
 
   const hasFaceEnrolled = Boolean(loggedInUser?.hasFaceEnrolled);
+
+  // Auto-submit as soon as face is captured during admin 2FA
+  useEffect(() => {
+    if (!capturedImage || loading || result?.verified) return;
+    if (!showFace2FA || !loggedInUser) return;
+    if (hasFaceEnrolled) {
+      handleFace2FAVerification();
+    } else {
+      handleFaceEnrollment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capturedImage]);
 
   // Handle tab switch
   const handleTabChange = (tab) => {
@@ -264,6 +276,7 @@ const LoginPage = () => {
           message: '✗ Face verification failed. Please try again.',
           verified: false
         });
+        setCapturedImage(null);
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Face verification failed.';
@@ -271,6 +284,7 @@ const LoginPage = () => {
         success: false,
         message: errorMessage
       });
+      setCapturedImage(null);
     } finally {
       setLoading(false);
     }
@@ -486,21 +500,15 @@ const LoginPage = () => {
                       <WebcamWithFaceDetection
                         onCapture={handleImageCapture}
                         capturedImage={capturedImage}
+                        autoCapture={true}
                       />
 
                       <div className="login-actions">
-                        {capturedImage && (
-                          <button
-                            onClick={hasFaceEnrolled ? handleFace2FAVerification : handleFaceEnrollment}
-                            disabled={loading}
-                            className="btn btn-login"
-                          >
-                            {loading
-                              ? (hasFaceEnrolled ? '⏳ Verifying...' : '⏳ Enrolling...')
-                              : (hasFaceEnrolled ? '✓ Verify Face' : '📸 Enroll Face')}
-                          </button>
+                        {loading && (
+                          <p className="auto-verify-status">
+                            {hasFaceEnrolled ? '⏳ Verifying face...' : '⏳ Enrolling face...'}
+                          </p>
                         )}
-                        
                         <button onClick={handleLogout} className="btn btn-secondary">
                           {hasFaceEnrolled ? 'Cancel' : 'Do This Later'}
                         </button>
