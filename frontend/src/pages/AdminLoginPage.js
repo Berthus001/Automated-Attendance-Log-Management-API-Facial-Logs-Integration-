@@ -57,6 +57,7 @@ const AdminLoginPage = () => {
       if (response.success) {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('pendingFace2FA', 'true');
         
         setLoggedInUser(response.user);
         setShowFace2FA(true);
@@ -112,6 +113,7 @@ const AdminLoginPage = () => {
       if (response.success) {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('pendingFace2FA', 'true');
         
         setLoggedInUser(response.user);
         setShowFace2FA(true);
@@ -193,6 +195,7 @@ const AdminLoginPage = () => {
       const response = await verifyFace2FA({ image: capturedImage });
 
       if (response.success && response.verified) {
+        localStorage.removeItem('pendingFace2FA');
         setResult({
           success: true,
           message: '✓ Face verified! Full access granted.',
@@ -230,6 +233,7 @@ const AdminLoginPage = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('pendingFace2FA');
     setLoggedInUser(null);
     setShowFace2FA(false);
     setResult(null);
