@@ -103,9 +103,13 @@ const EnrollPage = () => {
       }
     } catch (error) {
       // Show error - network or API error
+      const apiError = error.response?.data;
+      const errorCode = apiError?.error;
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.message || 'Network error. Please try again.' 
+        text: errorCode === 'DUPLICATE_FACE'
+          ? 'This face is already registered to another account. One face can only belong to one account.'
+          : (apiError?.message || 'Network error. Please try again.')
       });
     } finally {
       // Always hide loading state
@@ -194,6 +198,8 @@ const EnrollPage = () => {
 
               <div className="form-info">
                 <p>📸 Capture your photo using the webcam on the right</p>
+                <p>🔒 One face can only be registered to one account.</p>
+                <p>💡 Keep your face centered, well-lit, and remove extra faces from view.</p>
               </div>
 
               <button 

@@ -26,6 +26,17 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage, autoCapture = false
   const [autoProgress, setAutoProgress] = useState(0);
   const AUTO_CAPTURE_THRESHOLD = 20; // 2 seconds at 100ms interval
 
+  const getGuidanceText = () => {
+    if (cameraError || modelError) return null;
+    if (isInitializing) return 'Initializing camera and face detection...';
+    if (!isCameraReady) return 'Preparing camera...';
+    if (!isModelLoaded) return 'Preparing face detection...';
+    if (detectionCount > 1) return 'Only one face should be visible in the frame.';
+    if (!faceDetected) return 'Center your face inside the guide and look straight at the camera.';
+    if (autoCapture) return 'Great. Hold still while the system captures your face.';
+    return 'Face detected. Capture when ready.';
+  };
+
   // Stop camera and release resources - use ref to access stream
   const stopCamera = useCallback(() => {
     if (stream) {
@@ -577,6 +588,25 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage, autoCapture = false
                 </span>
               </div>
             )}
+
+            {/* Face framing guide */}
+            {isCameraReady && !cameraError && (
+              <div className={`face-guide ${faceDetected && detectionCount === 1 ? 'active' : ''}`} />
+            )}
+
+            {/* Multiple faces warning */}
+            {isCameraReady && isModelLoaded && detectionCount > 1 && (
+              <div className="multi-face-warning">
+                Multiple faces detected. Keep only one face in view.
+              </div>
+            )}
+
+            {/* Live guidance panel */}
+            {getGuidanceText() && (
+              <div className="camera-guidance-panel">
+                <p>{getGuidanceText()}</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -597,13 +627,18 @@ const WebcamWithFaceDetection = ({ onCapture, capturedImage, autoCapture = false
             {isCameraReady && isModelLoaded && !cameraError && !modelError ? (
               faceDetected ? (
                 <div className="auto-capture-progress">
-                  <p className="auto-capture-label">Hold still... scanning</p>
+                  <p className="auto-capture-label">Hold still... capturing</p>
                   <div className="progress-bar-track">
                     <div
                       className="progress-bar-fill"
                       style={{ width: `${autoProgress}%` }}
                     />
                   </div>
+                  <p className="auto-capture-subtext">
+                    {autoProgress >= 100
+                      ? 'Capturing now...'
+                      : `Capturing in ${(2 - (autoProgress / 100) * 2).toFixed(1)}s`}
+                  </p>
                 </div>
               ) : (
                 <p className="auto-capture-waiting">👤 Position your face in the frame</p>

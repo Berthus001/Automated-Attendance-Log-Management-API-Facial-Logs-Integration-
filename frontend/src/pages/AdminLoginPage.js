@@ -169,7 +169,11 @@ const AdminLoginPage = () => {
         });
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Face enrollment failed.';
+      const apiError = error.response?.data;
+      const errorCode = apiError?.error;
+      const errorMessage = errorCode === 'DUPLICATE_FACE'
+        ? 'This face is already registered to another account. Use a unique face profile or contact superadmin.'
+        : (apiError?.message || 'Face enrollment failed.');
       setResult({
         success: false,
         message: errorMessage
@@ -335,7 +339,7 @@ const AdminLoginPage = () => {
                       <p>
                         {hasFaceEnrolled
                           ? 'Verify your identity to finish signing in'
-                          : 'Capture a clear face photo to enable face-based 2FA'}
+                          : 'Capture a clear face photo to enable face-based 2FA. The same face cannot be used across different accounts.'}
                       </p>
                     </div>
 

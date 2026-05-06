@@ -1,4 +1,5 @@
 const User = require('../models/User.model');
+const Student = require('../models/Student.model');
 const { loadModels, extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
 
 // Load face recognition models on startup
@@ -136,7 +137,7 @@ exports.createUser = async (req, res) => {
       faceDescriptor: { $exists: true, $ne: [] },
     }).select('_id name email role faceDescriptor');
 
-    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.45');
+    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
     for (const existingFaceUser of existingFaceUsers) {
       const comparison = compareFaces(existingFaceUser.faceDescriptor, faceDescriptor, duplicateFaceThreshold);
       if (comparison.isMatch) {
@@ -147,6 +148,27 @@ exports.createUser = async (req, res) => {
           match: {
             existingUserId: existingFaceUser._id,
             role: existingFaceUser.role,
+            distance: comparison.distance,
+            threshold: duplicateFaceThreshold,
+          },
+        });
+      }
+    }
+
+    // Also compare against enrolled students repository
+    const existingFaceStudents = await Student.find({
+      faceDescriptor: { $exists: true, $ne: [] },
+    }).select('_id studentId name faceDescriptor');
+
+    for (const existingFaceStudent of existingFaceStudents) {
+      const comparison = compareFaces(existingFaceStudent.faceDescriptor, faceDescriptor, duplicateFaceThreshold);
+      if (comparison.isMatch) {
+        return res.status(409).json({
+          success: false,
+          message: 'Face already registered',
+          error: 'DUPLICATE_FACE',
+          match: {
+            existingStudentId: existingFaceStudent.studentId,
             distance: comparison.distance,
             threshold: duplicateFaceThreshold,
           },

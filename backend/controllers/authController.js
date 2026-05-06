@@ -1,4 +1,5 @@
 const User = require('../models/User.model');
+const Student = require('../models/Student.model');
 const LoginLog = require('../models/LoginLog.model');
 const AttendanceLog = require('../models/AttendanceLog.model');
 const jwt = require('jsonwebtoken');
@@ -175,6 +176,51 @@ exports.enrollFace = async (req, res) => {
         message: 'Failed to extract face descriptor from image',
         error: error.message,
       });
+    }
+
+    // Enforce face uniqueness across all other user/student profiles
+    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
+
+    const otherUsers = await User.find({
+      _id: { $ne: user._id },
+      faceDescriptor: { $exists: true, $ne: [] },
+    }).select('_id role faceDescriptor');
+
+    for (const otherUser of otherUsers) {
+      const comparison = compareFaces(otherUser.faceDescriptor, faceResult.descriptor, duplicateFaceThreshold);
+      if (comparison.isMatch) {
+        return res.status(409).json({
+          success: false,
+          message: 'Face already registered',
+          error: 'DUPLICATE_FACE',
+          match: {
+            existingUserId: otherUser._id,
+            role: otherUser.role,
+            distance: comparison.distance,
+            threshold: duplicateFaceThreshold,
+          },
+        });
+      }
+    }
+
+    const students = await Student.find({
+      faceDescriptor: { $exists: true, $ne: [] },
+    }).select('studentId faceDescriptor');
+
+    for (const student of students) {
+      const comparison = compareFaces(student.faceDescriptor, faceResult.descriptor, duplicateFaceThreshold);
+      if (comparison.isMatch) {
+        return res.status(409).json({
+          success: false,
+          message: 'Face already registered',
+          error: 'DUPLICATE_FACE',
+          match: {
+            existingStudentId: student.studentId,
+            distance: comparison.distance,
+            threshold: duplicateFaceThreshold,
+          },
+        });
+      }
     }
 
     user.faceDescriptor = faceResult.descriptor;

@@ -1,6 +1,7 @@
 const { Student } = require('../models');
+const User = require('../models/User.model');
 const { processBase64Image } = require('../utils/imageProcessor');
-const { extractFaceDescriptorFromBase64 } = require('../utils/faceDetection');
+const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
 const { isValidBase64Image } = require('../utils/imageHelpers');
 
 /**
@@ -56,6 +57,50 @@ exports.enrollStudent = async (req, res) => {
         error: faceResult.error,
         faceCount: faceResult.faceCount,
       });
+    }
+
+    // Block duplicate face across existing students and users
+    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
+
+    const enrolledStudents = await Student.find({
+      faceDescriptor: { $exists: true, $ne: [] },
+    }).select('studentId faceDescriptor');
+
+    for (const enrolledStudent of enrolledStudents) {
+      const comparison = compareFaces(enrolledStudent.faceDescriptor, faceResult.descriptor, duplicateFaceThreshold);
+      if (comparison.isMatch) {
+        return res.status(409).json({
+          success: false,
+          message: 'Face already registered',
+          error: 'DUPLICATE_FACE',
+          match: {
+            existingStudentId: enrolledStudent.studentId,
+            distance: comparison.distance,
+            threshold: duplicateFaceThreshold,
+          },
+        });
+      }
+    }
+
+    const existingUsers = await User.find({
+      faceDescriptor: { $exists: true, $ne: [] },
+    }).select('_id role faceDescriptor');
+
+    for (const existingUser of existingUsers) {
+      const comparison = compareFaces(existingUser.faceDescriptor, faceResult.descriptor, duplicateFaceThreshold);
+      if (comparison.isMatch) {
+        return res.status(409).json({
+          success: false,
+          message: 'Face already registered',
+          error: 'DUPLICATE_FACE',
+          match: {
+            existingUserId: existingUser._id,
+            role: existingUser.role,
+            distance: comparison.distance,
+            threshold: duplicateFaceThreshold,
+          },
+        });
+      }
     }
 
     // Process and save image
@@ -178,6 +223,51 @@ exports.updateEnrolledStudent = async (req, res) => {
           error: faceResult.error,
           faceCount: faceResult.faceCount,
         });
+      }
+
+      // Block duplicate face on re-enrollment/update (exclude current student)
+      const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
+
+      const otherStudents = await Student.find({
+        studentId: { $ne: student.studentId },
+        faceDescriptor: { $exists: true, $ne: [] },
+      }).select('studentId faceDescriptor');
+
+      for (const otherStudent of otherStudents) {
+        const comparison = compareFaces(otherStudent.faceDescriptor, faceResult.descriptor, duplicateFaceThreshold);
+        if (comparison.isMatch) {
+          return res.status(409).json({
+            success: false,
+            message: 'Face already registered',
+            error: 'DUPLICATE_FACE',
+            match: {
+              existingStudentId: otherStudent.studentId,
+              distance: comparison.distance,
+              threshold: duplicateFaceThreshold,
+            },
+          });
+        }
+      }
+
+      const existingUsers = await User.find({
+        faceDescriptor: { $exists: true, $ne: [] },
+      }).select('_id role faceDescriptor');
+
+      for (const existingUser of existingUsers) {
+        const comparison = compareFaces(existingUser.faceDescriptor, faceResult.descriptor, duplicateFaceThreshold);
+        if (comparison.isMatch) {
+          return res.status(409).json({
+            success: false,
+            message: 'Face already registered',
+            error: 'DUPLICATE_FACE',
+            match: {
+              existingUserId: existingUser._id,
+              role: existingUser.role,
+              distance: comparison.distance,
+              threshold: duplicateFaceThreshold,
+            },
+          });
+        }
       }
 
       // Update face descriptor
