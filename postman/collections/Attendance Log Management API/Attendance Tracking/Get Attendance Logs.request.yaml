@@ -1,0 +1,16 @@
+$kind: http-request
+name: Get Attendance Logs
+method: GET
+url: '{{baseUrl}}/api/attendance/logs?page=1&limit=50&sortBy=-createdAt&userId=507f1f77bcf86cd799439012'
+order: 3000
+description: Get attendance logs with filtering and pagination.
+queryParams:
+  - key: page
+    value: '1'
+  - key: limit
+    value: '50'
+  - key: sortBy
+    value: '-createdAt'
+  - key: userId
+    value: 507f1f77bcf86cd799439012
+    disabled: true

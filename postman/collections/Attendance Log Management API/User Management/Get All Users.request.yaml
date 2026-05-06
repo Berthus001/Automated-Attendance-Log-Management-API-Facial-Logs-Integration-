@@ -1,0 +1,11 @@
+$kind: http-request
+name: Get All Users
+method: GET
+url: '{{baseUrl}}/api/users?role=student'
+order: 1000
+description: Fetch all registered users (filterable by role).
+queryParams:
+  - key: role
+    value: student
+    disabled: true
+    description: 'Filter by role: student, teacher, admin, superadmin'

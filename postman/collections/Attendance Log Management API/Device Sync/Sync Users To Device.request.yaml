@@ -1,0 +1,6 @@
+$kind: http-request
+name: Sync Users To Device
+method: GET
+url: '{{baseUrl}}/api/device-sync/users'
+order: 1000
+description: Sync user list to kiosk device.

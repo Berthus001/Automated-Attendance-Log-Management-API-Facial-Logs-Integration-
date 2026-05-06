@@ -1,0 +1,18 @@
+$kind: http-request
+name: Re-Enroll User
+method: POST
+url: '{{baseUrl}}/api/enroll/re-enroll/:userId'
+order: 2000
+description: Re-enroll a user with new face data.
+pathVariables:
+  - key: userId
+    value: 507f1f77bcf86cd799439012
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "faceImage": "<base64_image_data>"
+    }

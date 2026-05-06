@@ -1,0 +1,16 @@
+$kind: http-request
+name: Capture Face
+method: POST
+url: '{{baseUrl}}/api/enroll/capture-face'
+order: 1000
+description: Capture and store face descriptor for enrollment.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "userId": "507f1f77bcf86cd799439012",
+      "faceImage": "<base64_image_data>"
+    }

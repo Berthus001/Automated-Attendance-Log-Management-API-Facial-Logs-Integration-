@@ -1,0 +1,57 @@
+$kind: http-request
+name: Superadmin Login
+method: POST
+url: '{{baseUrl}}/api/auth/login'
+order: 1500
+description: 'Authenticate as superadmin. Uses forceLogin:true to override any existing session. The post-response script auto-saves the returned JWT to the authToken environment variable so all subsequent protected requests work automatically.'
+auth:
+  type: noauth
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "superadmin@attendance.com",
+      "password": "Admin@123456",
+      "forceLogin": true
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // Auto-save Superadmin JWT token from login response
+      pm.test('Status code is 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      try {
+          const json = pm.response.json();
+          const token =
+              json.token ||
+              json.accessToken ||
+              (json.data && (json.data.token || json.data.accessToken));
+
+          if (token) {
+              pm.environment.set('authToken', token);
+              pm.environment.set('superadminToken', token);
+              console.log('Saved superadmin authToken to environment:', pm.environment.name || '(none)');
+
+              const userId = (json.user && (json.user.id || json.user._id)) || json.userId;
+              if (userId) {
+                  pm.environment.set('currentUserId', String(userId));
+                  pm.environment.set('userId', String(userId));
+              }
+
+              pm.test('Token returned and saved', function () {
+                  pm.expect(token).to.be.a('string').and.not.empty;
+              });
+          } else {
+              pm.test('Token returned', function () {
+                  pm.expect.fail('No token field found in response JSON');
+              });
+          }
+      } catch (e) {
+          console.error('Failed to parse JSON response:', e.message);
+      }

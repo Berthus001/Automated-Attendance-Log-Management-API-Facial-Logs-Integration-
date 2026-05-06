@@ -1,0 +1,15 @@
+$kind: http-request
+name: Detect Faces
+method: POST
+url: '{{baseUrl}}/api/face/detect'
+order: 1000
+description: Detect faces in uploaded image. Returns array of detected faces with bounding boxes.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "image": "<base64_image_data>"
+    }

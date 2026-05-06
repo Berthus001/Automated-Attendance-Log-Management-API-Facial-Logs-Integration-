@@ -1,0 +1,16 @@
+$kind: http-request
+name: Verify Face
+method: POST
+url: '{{baseUrl}}/api/face/verify'
+order: 2000
+description: Verify face against stored descriptors. Threshold 0.45.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "faceDescriptor": [0.123, -0.456],
+      "userId": "507f1f77bcf86cd799439012"
+    }

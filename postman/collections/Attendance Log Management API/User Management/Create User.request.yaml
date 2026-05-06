@@ -1,0 +1,19 @@
+$kind: http-request
+name: Create User
+method: POST
+url: '{{baseUrl}}/api/users'
+order: 3000
+description: Create a new user account with face enrollment.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "john.doe@school.com",
+      "password": "UserPass123",
+      "role": "student",
+      "department": "Computer Science",
+      "faceImage": "<base64_image_data>"
+    }

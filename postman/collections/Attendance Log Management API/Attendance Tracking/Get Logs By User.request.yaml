@@ -1,0 +1,9 @@
+$kind: http-request
+name: Get Logs By User
+method: GET
+url: '{{baseUrl}}/api/attendance/logs/user/:userId'
+order: 5000
+description: Get all attendance logs for a specific user.
+pathVariables:
+  - key: userId
+    value: 507f1f77bcf86cd799439012

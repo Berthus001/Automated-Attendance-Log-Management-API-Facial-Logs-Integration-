@@ -1,0 +1,42 @@
+$kind: environment
+name: Superadmin
+variables:
+  - key: baseUrl
+    value: 'http://localhost:5000'
+    enabled: true
+  - key: authToken
+    value: '[REDACTED: JSON Web Token]'
+    enabled: true
+    secret: true
+  - key: superadminToken
+    value: '[REDACTED: JSON Web Token]'
+    enabled: true
+    secret: true
+  - key: adminEmail
+    value: 'eleonor.sarona@admin.com'
+    enabled: true
+  - key: adminPassword
+    value: 'your_password'
+    enabled: true
+    secret: true
+  - key: userId
+    value: '507f1f77bcf86cd799439012'
+    enabled: true
+  - key: studentId
+    value: '2021-00123'
+    enabled: true
+  - key: enrolledStudentId
+    value: '2021-00789'
+    enabled: true
+  - key: logId
+    value: '1'
+    enabled: true
+  - key: loginLogId
+    value: '1'
+    enabled: true
+  - key: deviceId
+    value: 'DEVICE-001'
+    enabled: true
+  - key: faceImageB64
+    value: 'data:image/jpeg;base64,/9j/4AAQSkZJRg...'
+    enabled: true

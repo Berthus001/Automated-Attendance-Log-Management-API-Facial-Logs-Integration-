@@ -1,0 +1,18 @@
+$kind: http-request
+name: Kiosk Record Attendance
+method: POST
+url: '{{baseUrl}}/api/attendance/kiosk/record'
+order: 2000
+description: Record attendance (time-in or time-out).
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "userId": "507f1f77bcf86cd799439012",
+      "faceDescriptor": [0.123, -0.456],
+      "confidenceScore": 0.94,
+      "imagePath": "/uploads/attendance/kiosk_capture.jpg"
+    }

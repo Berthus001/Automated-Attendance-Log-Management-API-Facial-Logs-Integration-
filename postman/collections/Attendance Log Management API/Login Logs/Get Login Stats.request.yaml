@@ -1,0 +1,6 @@
+$kind: http-request
+name: Get Login Stats
+method: GET
+url: '{{baseUrl}}/api/login-logs/stats'
+order: 2000
+description: Get login statistics by role.

@@ -1,5 +1,5 @@
 const User = require('../models/User.model');
-const { loadModels, extractFaceDescriptorFromBase64 } = require('../utils/faceDetection');
+const { loadModels, extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
 
 // Load face recognition models on startup
 loadModels().catch((error) => {
@@ -80,7 +80,7 @@ exports.getUser = async (req, res) => {
 // @access  Private (SuperAdmin can create admin/teacher/student, Admin can create teacher/student)
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role, image, department } = req.body;
+    const { name, email, password, role, image, department, username, studentId, accountId } = req.body;
 
     // Validate required fields
     if (!name || !email || !password || !role) {
@@ -106,7 +106,55 @@ exports.createUser = async (req, res) => {
       });
     }
 
-    // Role-based validation: Check if requester can create this role
+    // 1) User uploads/registers face
+    // 2) System extracts face descriptor
+    let faceDescriptor = [];
+    try {
+      const faceResult = await extractFaceDescriptorFromBase64(image);
+
+      if (!faceResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: faceResult.message,
+          error: faceResult.error,
+          faceCount: faceResult.faceCount,
+        });
+      }
+
+      faceDescriptor = faceResult.descriptor;
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to extract face descriptor from image',
+        error: error.message,
+      });
+    }
+
+    // 3) System compares against all existing users
+    // 4) If similarity match found: block duplicate face registration
+    const existingFaceUsers = await User.find({
+      faceDescriptor: { $exists: true, $ne: [] },
+    }).select('_id name email role faceDescriptor');
+
+    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.45');
+    for (const existingFaceUser of existingFaceUsers) {
+      const comparison = compareFaces(existingFaceUser.faceDescriptor, faceDescriptor, duplicateFaceThreshold);
+      if (comparison.isMatch) {
+        return res.status(409).json({
+          success: false,
+          message: 'Face already registered',
+          error: 'DUPLICATE_FACE',
+          match: {
+            existingUserId: existingFaceUser._id,
+            role: existingFaceUser.role,
+            distance: comparison.distance,
+            threshold: duplicateFaceThreshold,
+          },
+        });
+      }
+    }
+
+    // 5) Check role restrictions
     const requesterRole = req.user.role;
 
     if (requesterRole === 'admin') {
@@ -133,45 +181,68 @@ exports.createUser = async (req, res) => {
       });
     }
 
-    // Check if email already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
+    // Duplicate email check
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const existingEmailUser = await User.findOne({ email: normalizedEmail });
+    if (existingEmailUser) {
+      return res.status(409).json({
         success: false,
         message: 'Email already registered',
+        error: 'DUPLICATE_EMAIL',
       });
     }
 
-    // Extract face descriptor from base64 image
-    let faceDescriptor = [];
-    try {
-      const faceResult = await extractFaceDescriptorFromBase64(image);
-
-      if (!faceResult.success) {
-        return res.status(400).json({
+    // Duplicate username check (optional)
+    let normalizedUsername;
+    if (typeof username === 'string' && username.trim()) {
+      normalizedUsername = username.toLowerCase().trim();
+      const existingUsernameUser = await User.findOne({ username: normalizedUsername });
+      if (existingUsernameUser) {
+        return res.status(409).json({
           success: false,
-          message: faceResult.message,
-          error: faceResult.error,
-          faceCount: faceResult.faceCount,
+          message: 'Username already exists',
+          error: 'DUPLICATE_USERNAME',
         });
       }
-
-      faceDescriptor = faceResult.descriptor;
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        message: 'Failed to extract face descriptor from image',
-        error: error.message,
-      });
     }
 
-    // Create user with face descriptor
+    // Duplicate ID checks (studentId/accountId are optional)
+    let normalizedStudentId;
+    if (typeof studentId === 'string' && studentId.trim()) {
+      normalizedStudentId = studentId.toUpperCase().trim();
+      const existingStudentIdUser = await User.findOne({ studentId: normalizedStudentId });
+      if (existingStudentIdUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'Student ID already exists',
+          error: 'DUPLICATE_ID',
+        });
+      }
+    }
+
+    let normalizedAccountId;
+    if (typeof accountId === 'string' && accountId.trim()) {
+      normalizedAccountId = accountId.toUpperCase().trim();
+      const existingAccountIdUser = await User.findOne({ accountId: normalizedAccountId });
+      if (existingAccountIdUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'Account ID already exists',
+          error: 'DUPLICATE_ID',
+        });
+      }
+    }
+
+    // 6) Save user
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password,
       role,
       department: department || '',
+      username: normalizedUsername,
+      studentId: normalizedStudentId,
+      accountId: normalizedAccountId,
       faceDescriptor,
       createdBy: req.user._id,
     });
@@ -217,9 +288,95 @@ exports.updateUser = async (req, res) => {
         });
       }
     }
+
+    // Enforce immutable role policy for all accounts
+    if (typeof req.body.role !== 'undefined') {
+      if (req.body.role !== userToUpdate.role) {
+        return res.status(403).json({
+          success: false,
+          message: 'Role change is not allowed. Create a new account for a different role.',
+        });
+      }
+
+      // Strip unchanged role from payload
+      delete req.body.role;
+    }
+
+    // Normalize and validate uniqueness for mutable identity fields
+    if (typeof req.body.email === 'string') {
+      req.body.email = req.body.email.toLowerCase().trim();
+      if (req.body.email && req.body.email !== userToUpdate.email) {
+        const existingEmailUser = await User.findOne({
+          email: req.body.email,
+          _id: { $ne: userToUpdate._id },
+        });
+
+        if (existingEmailUser) {
+          return res.status(409).json({
+            success: false,
+            message: 'Email already registered',
+            error: 'DUPLICATE_EMAIL',
+          });
+        }
+      }
+    }
+
+    if (typeof req.body.username === 'string') {
+      req.body.username = req.body.username.toLowerCase().trim();
+      if (req.body.username && req.body.username !== userToUpdate.username) {
+        const existingUsernameUser = await User.findOne({
+          username: req.body.username,
+          _id: { $ne: userToUpdate._id },
+        });
+
+        if (existingUsernameUser) {
+          return res.status(409).json({
+            success: false,
+            message: 'Username already exists',
+            error: 'DUPLICATE_USERNAME',
+          });
+        }
+      }
+    }
+
+    if (typeof req.body.studentId === 'string') {
+      req.body.studentId = req.body.studentId.toUpperCase().trim();
+      if (req.body.studentId && req.body.studentId !== userToUpdate.studentId) {
+        const existingStudentIdUser = await User.findOne({
+          studentId: req.body.studentId,
+          _id: { $ne: userToUpdate._id },
+        });
+
+        if (existingStudentIdUser) {
+          return res.status(409).json({
+            success: false,
+            message: 'Student ID already exists',
+            error: 'DUPLICATE_ID',
+          });
+        }
+      }
+    }
+
+    if (typeof req.body.accountId === 'string') {
+      req.body.accountId = req.body.accountId.toUpperCase().trim();
+      if (req.body.accountId && req.body.accountId !== userToUpdate.accountId) {
+        const existingAccountIdUser = await User.findOne({
+          accountId: req.body.accountId,
+          _id: { $ne: userToUpdate._id },
+        });
+
+        if (existingAccountIdUser) {
+          return res.status(409).json({
+            success: false,
+            message: 'Account ID already exists',
+            error: 'DUPLICATE_ID',
+          });
+        }
+      }
+    }
     
-    // Prevent changing certain fields
-    const protectedFields = ['role', 'createdBy'];
+    // Prevent changing protected ownership metadata
+    const protectedFields = ['createdBy'];
     if (req.user.role !== 'superadmin') {
       protectedFields.forEach(field => {
         if (req.body[field]) {

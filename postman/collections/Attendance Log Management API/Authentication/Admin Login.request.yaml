@@ -1,0 +1,67 @@
+$kind: http-request
+name: Admin Login
+method: POST
+url: '{{baseUrl}}/api/auth/login'
+order: 1000
+description: 'Authenticate admin/superadmin with email and password. Returns user object + JWT token. The post-response script auto-saves the returned JWT to the authToken environment variable.'
+auth:
+  type: noauth
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "admin1@attendance.com",
+      "password": "Admin@123456"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // Auto-save JWT token from login response
+      pm.test('Status code is 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      try {
+          const json = pm.response.json();
+
+          // Try common token field locations
+          const token =
+              json.token ||
+              json.accessToken ||
+              json.access_token ||
+              (json.data && (json.data.token || json.data.accessToken)) ||
+              (json.user && json.user.token);
+
+          if (token) {
+              // Save to active environment if available, else collection variable
+              if (pm.environment.name) {
+                  pm.environment.set('authToken', token);
+                  pm.environment.set('adminToken', token);
+                  console.log('Saved authToken to environment:', pm.environment.name);
+              } else {
+                  pm.collectionVariables.set('authToken', token);
+                  console.log('Saved authToken to collection variables (no active environment)');
+              }
+
+              // Optionally save user id if present
+              const userId = (json.user && (json.user.id || json.user._id)) || json.userId;
+              if (userId) {
+                  pm.environment.set('currentUserId', String(userId));
+              }
+
+              pm.test('Token returned and saved', function () {
+                  pm.expect(token).to.be.a('string').and.not.empty;
+              });
+          } else {
+              console.warn('No token field found in response. Inspect response body to map field name.');
+              pm.test('Token returned', function () {
+                  pm.expect.fail('No token field found in response JSON');
+              });
+          }
+      } catch (e) {
+          console.error('Failed to parse JSON response:', e.message);
+      }

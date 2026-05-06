@@ -19,12 +19,12 @@ Access control rules for all attendance-related endpoints.
 
 ```js
 protect          // Verifies JWT, attaches req.user, checks isActive
-allowRoles(...roles)  // RBAC check — also exported as `authorize`
+allowRoles(...roles)  // RBAC check ï¿½ also exported as `authorize`
 ```
 
 ---
 
-## Attendance Log Endpoints — Access Rules
+## Attendance Log Endpoints ï¿½ Access Rules
 
 ### `/api/logs`
 
@@ -69,7 +69,7 @@ allowRoles(...roles)  // RBAC check — also exported as `authorize`
 | View all login logs | Yes |
 | Create admins | Yes |
 | Delete any non-superadmin user | Yes |
-| View superadmin-created users only | No — views all users |
+| View superadmin-created users only | No ï¿½ views all users |
 
 ---
 
@@ -81,7 +81,7 @@ allowRoles(...roles)  // RBAC check — also exported as `authorize`
 | Create users | Yes | Teachers and students only |
 | Delete users | Yes | Only users they created |
 | View login logs | Yes | Only for users they created |
-| Create another admin | No | 403 — role escalation blocked |
+| Create another admin | No | 403 ï¿½ role escalation blocked |
 
 ---
 
@@ -100,13 +100,13 @@ allowRoles(...roles)  // RBAC check — also exported as `authorize`
 ## RBAC Enforcement in Code
 
 ```js
-// Example — admin+ only
+// Example ï¿½ admin+ only
 router.get('/', protect, allowRoles('admin', 'superadmin'), asyncHandler(getAttendanceLogs));
 
-// Example — all authenticated users
+// Example ï¿½ all authenticated users
 router.get('/my-attendance', protect, asyncHandler(getMyAttendance));
 
-// Example — public
+// Example ï¿½ public
 router.get('/descriptors', asyncHandler(getKioskDescriptors));
 ```
 

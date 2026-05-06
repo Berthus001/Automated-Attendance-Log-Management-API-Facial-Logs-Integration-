@@ -1,0 +1,12 @@
+$kind: http-request
+name: Upload Face Image
+method: POST
+url: '{{baseUrl}}/api/upload/face'
+order: 1000
+description: Upload and process face image.
+body:
+  type: formdata
+  content:
+    - key: image
+      type: file
+      src: ''

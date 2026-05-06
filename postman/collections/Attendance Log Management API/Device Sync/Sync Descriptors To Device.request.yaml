@@ -1,0 +1,6 @@
+$kind: http-request
+name: Sync Descriptors To Device
+method: GET
+url: '{{baseUrl}}/api/device-sync/descriptors'
+order: 2000
+description: Sync face descriptors to kiosk device.

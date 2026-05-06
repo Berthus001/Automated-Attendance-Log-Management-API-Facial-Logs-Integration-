@@ -1,0 +1,12 @@
+$kind: http-request
+name: Upload Attendance Photo
+method: POST
+url: '{{baseUrl}}/api/upload/attendance-photo'
+order: 2000
+description: Upload attendance capture photo.
+body:
+  type: formdata
+  content:
+    - key: image
+      type: file
+      src: ''

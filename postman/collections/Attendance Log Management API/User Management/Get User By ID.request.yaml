@@ -1,0 +1,14 @@
+$kind: http-request
+name: Get User By ID
+method: GET
+url: '{{baseUrl}}/api/users/:id'
+order: 2000
+description: 'Get a single user by ID. Uses {{authToken}} which is auto-populated by running 'Superadmin Login' first.'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{authToken}}'
+pathVariables:
+  - key: id
+    value: '507f1f77bcf86cd799439011'

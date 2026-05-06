@@ -15,6 +15,27 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+    },
+    studentId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
+    accountId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
     password: {
       type: String,
       required: [true, 'Please provide a password'],
@@ -61,6 +82,9 @@ const userSchema = new mongoose.Schema(
 // Indexes
 userSchema.index({ role: 1 });
 userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ username: 1 }, { unique: true, sparse: true });
+userSchema.index({ studentId: 1 }, { unique: true, sparse: true });
+userSchema.index({ accountId: 1 }, { unique: true, sparse: true });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {

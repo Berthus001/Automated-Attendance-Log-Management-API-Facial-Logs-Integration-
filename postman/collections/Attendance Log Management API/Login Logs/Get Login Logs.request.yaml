@@ -1,0 +1,13 @@
+$kind: http-request
+name: Get Login Logs
+method: GET
+url: '{{baseUrl}}/api/login-logs?page=1&limit=50'
+order: 1000
+description: Get admin/superadmin login history.
+queryParams:
+  - key: page
+    value: '1'
+    disabled: true
+  - key: limit
+    value: '50'
+    disabled: true

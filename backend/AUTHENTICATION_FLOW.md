@@ -1,4 +1,4 @@
-# Authentication System — Complete Flow
+# Authentication System ï¿½ Complete Flow
 
 The system uses two distinct login paths depending on the user role.
 
@@ -15,7 +15,7 @@ The system uses two distinct login paths depending on the user role.
 
 ---
 
-## 1. Admin / Superadmin — Email + Password Login
+## 1. Admin / Superadmin ï¿½ Email + Password Login
 
 ### Step 1: Password Login
 
@@ -102,7 +102,7 @@ Authorization: Bearer <jwt-token>
 
 ---
 
-## 2. Teacher / Student — Face-Only Login
+## 2. Teacher / Student ï¿½ Face-Only Login
 
 **`POST /api/auth/face-login`** (Public)
 
@@ -113,7 +113,7 @@ Authorization: Bearer <jwt-token>
 }
 ```
 
-**Success — attendance recorded (200):**
+**Success ï¿½ attendance recorded (200):**
 ```json
 {
   "success": true,
@@ -240,7 +240,7 @@ Authorization: Bearer <jwt-token>
 | Setting | Value |
 |---|---|
 | Token expiry | 7 days (configurable via `JWT_EXPIRE`) |
-| Session timeout | 24 hours — stale sessions auto-cleared |
+| Session timeout | 24 hours ï¿½ stale sessions auto-cleared |
 | Multi-session | Blocked (returns 409). Use `forceLogin: true` to override |
 
 ### Session Flow

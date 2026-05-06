@@ -1,0 +1,13 @@
+$kind: collection
+name: Attendance Log Management API
+description: 'Automated Attendance Log Management API with Facial Logs Integration. Bearer JWT auth required for all endpoints except /api/auth/login and /api/auth/face-login.'
+variables:
+  - key: baseUrl
+    value: 'http://localhost:5000'
+  - key: authToken
+    value: ''
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{authToken}}'
