@@ -24,6 +24,7 @@ const DashboardPage = () => {
     email: '',
     password: '',
     role: 'student',
+    department: '',
   });
   const [capturedImage, setCapturedImage] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -102,6 +103,7 @@ const DashboardPage = () => {
       email: '',
       password: '',
       role: 'student',
+      department: '',
     });
     setCapturedImage(null);
     setFormError(null);
@@ -116,6 +118,7 @@ const DashboardPage = () => {
       email: user.email,
       password: '', // Don't pre-fill password
       role: user.role,
+      department: user.department || '',
     });
     setCapturedImage(null);
     setFormError(null);
@@ -165,6 +168,7 @@ const DashboardPage = () => {
         name: formData.name.trim(),
         email: formData.email.trim(),
         role: formData.role,
+        department: formData.department || '',
       };
 
       if (formData.password.trim()) {
@@ -186,12 +190,20 @@ const DashboardPage = () => {
         // Reload users list
         await loadUsers();
         setShowModal(false);
-        setFormData({ name: '', email: '', password: '', role: 'student' });
+        setFormData({ name: '', email: '', password: '', role: 'student', department: '' });
         setCapturedImage(null);
       }
     } catch (error) {
       console.error('Form submit error:', error);
-      setFormError(error.response?.data?.message || 'Operation failed. Please try again.');
+      const apiError = error.response?.data;
+      const errorCode = apiError?.error;
+      if (errorCode === 'DUPLICATE_FACE') {
+        setFormError('Face already registered. Please use a different person.');
+      } else if (errorCode === 'DUPLICATE_EMAIL') {
+        setFormError('Email already registered. Please use a different email.');
+      } else {
+        setFormError(apiError?.message || 'Operation failed. Please try again.');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -482,6 +494,22 @@ const DashboardPage = () => {
 
               <div className="form-row">
                 <div className="form-group">
+                  <label htmlFor="department">Department</label>
+                  <input
+                    type="text"
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleInputChange}
+                    placeholder="Computer Science"
+                    className="form-input"
+                    disabled={formLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
                   <label htmlFor="password">
                     Password {modalMode === 'add' ? '*' : '(leave blank to keep current)'}
                   </label>
@@ -506,7 +534,7 @@ const DashboardPage = () => {
                     value={formData.role}
                     onChange={handleInputChange}
                     className="form-input"
-                    disabled={formLoading}
+                    disabled={formLoading || modalMode === 'edit'}
                     required
                   >
                     <option value="student">Student</option>
@@ -518,6 +546,11 @@ const DashboardPage = () => {
                       </>
                     )}
                   </select>
+                  {modalMode === 'edit' && (
+                    <small style={{ color: '#6b7280', marginTop: '6px', display: 'block' }}>
+                      Role changes are disabled by system policy.
+                    </small>
+                  )}
                 </div>
               </div>
 

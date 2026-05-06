@@ -57,11 +57,8 @@ const SuperAdminDashboard = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    username: '',
     password: '',
     role: 'student',
-    studentId: '',
-    accountId: '',
     department: '',
   });
   const [capturedImage, setCapturedImage] = useState(null);
@@ -131,11 +128,8 @@ const SuperAdminDashboard = () => {
     setFormData({
       name: '',
       email: '',
-      username: '',
       password: '',
       role: roleType,
-      studentId: '',
-      accountId: '',
       department: '',
     });
     setCapturedImage(null);
@@ -149,11 +143,8 @@ const SuperAdminDashboard = () => {
     setFormData({
       name: user.name,
       email: user.email,
-      username: user.username || '',
       password: '',
       role: user.role,
-      studentId: user.studentId || '',
-      accountId: user.accountId || '',
       department: user.department || '',
     });
     setCapturedImage(null);
@@ -205,9 +196,6 @@ const SuperAdminDashboard = () => {
         name: formData.name.trim(),
         email: formData.email.trim(),
         role: formData.role,
-        username: formData.username.trim() || undefined,
-        studentId: formData.studentId.trim() || undefined,
-        accountId: formData.accountId.trim() || undefined,
         department: formData.department || '',
       };
 
@@ -232,11 +220,8 @@ const SuperAdminDashboard = () => {
         setFormData({
           name: '',
           email: '',
-          username: '',
           password: '',
           role: 'student',
-          studentId: '',
-          accountId: '',
           department: '',
         });
         setCapturedImage(null);
@@ -249,10 +234,6 @@ const SuperAdminDashboard = () => {
         setFormError('Face already registered. Please use a different person.');
       } else if (errorCode === 'DUPLICATE_EMAIL') {
         setFormError('Email already registered. Please use a different email.');
-      } else if (errorCode === 'DUPLICATE_USERNAME') {
-        setFormError('Username already exists. Please choose another username.');
-      } else if (errorCode === 'DUPLICATE_ID') {
-        setFormError('Student ID or Account ID already exists. Use a unique ID.');
       } else {
         setFormError(apiError?.message || 'Operation failed. Please try again.');
       }
@@ -630,18 +611,6 @@ const SuperAdminDashboard = () => {
               </div>
 
               <div className="form-group">
-                <label>Username (Optional)</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  placeholder="Enter username"
-                  disabled={formLoading}
-                />
-              </div>
-
-              <div className="form-group">
                 <label>Password {modalMode === 'edit' && '(leave blank to keep current)'}</label>
                 <input
                   type="password"
@@ -649,30 +618,6 @@ const SuperAdminDashboard = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Enter password"
-                  disabled={formLoading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Student ID (Optional)</label>
-                <input
-                  type="text"
-                  name="studentId"
-                  value={formData.studentId}
-                  onChange={handleInputChange}
-                  placeholder="Enter student ID"
-                  disabled={formLoading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Account ID (Optional)</label>
-                <input
-                  type="text"
-                  name="accountId"
-                  value={formData.accountId}
-                  onChange={handleInputChange}
-                  placeholder="Enter account ID"
                   disabled={formLoading}
                 />
               </div>
