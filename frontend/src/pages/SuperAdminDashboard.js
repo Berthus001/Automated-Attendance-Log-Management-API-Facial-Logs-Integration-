@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser } from '../services/api';
+import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance } from '../services/api';
 import './SuperAdminDashboard.css';
 
 const SuperAdminDashboard = () => {
@@ -11,9 +11,18 @@ const SuperAdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, users, admins
+  const [activeTab, setActiveTab] = useState('overview'); // overview, users, attendance, admins
   const [selectedRole, setSelectedRole] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceError, setAttendanceError] = useState(null);
+  const [attendanceRoleFilter, setAttendanceRoleFilter] = useState('all');
+  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+  const [attendancePage, setAttendancePage] = useState(1);
+  const [attendancePages, setAttendancePages] = useState(0);
+  const [attendanceTotal, setAttendanceTotal] = useState(0);
+  const attendanceLimit = 10;
 
   // Department options for React Select
   const departmentOptions = [
@@ -115,6 +124,49 @@ const SuperAdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  const loadAttendance = useCallback(async (page = 1) => {
+    try {
+      setAttendanceLoading(true);
+      setAttendanceError(null);
+
+      const filters = {
+        page,
+        limit: attendanceLimit,
+      };
+
+      if (attendanceRoleFilter !== 'all') {
+        filters.role = attendanceRoleFilter;
+      }
+
+      if (attendanceDateFilter) {
+        filters.date = attendanceDateFilter;
+      }
+
+      const response = await getAttendance(filters);
+
+      if (response?.success) {
+        setAttendanceLogs(response.data || []);
+        setAttendanceTotal(response.total || 0);
+        setAttendancePage(response.page || page);
+        setAttendancePages(response.pages || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load attendance:', err);
+      setAttendanceError(err.response?.data?.message || 'Failed to load attendance logs');
+      setAttendanceLogs([]);
+      setAttendanceTotal(0);
+      setAttendancePages(0);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  }, [attendanceRoleFilter, attendanceDateFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'attendance' && currentUser) {
+      loadAttendance(1);
+    }
+  }, [activeTab, currentUser, attendanceRoleFilter, attendanceDateFilter, loadAttendance]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -507,6 +559,128 @@ const SuperAdminDashboard = () => {
     </div>
   );
 
+  const renderAttendanceTab = () => {
+    const startRecord = attendanceTotal === 0 ? 0 : (attendancePage - 1) * attendanceLimit + 1;
+    const endRecord = Math.min(attendancePage * attendanceLimit, attendanceTotal);
+
+    return (
+      <div className="attendance-content">
+        <div className="users-header">
+          <h2 className="section-title">🕒 Attendance Records</h2>
+          <div className="attendance-controls">
+            <select
+              value={attendanceRoleFilter}
+              onChange={(e) => setAttendanceRoleFilter(e.target.value)}
+              className="role-filter"
+            >
+              <option value="all">All Roles</option>
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+            </select>
+            <input
+              type="date"
+              value={attendanceDateFilter}
+              onChange={(e) => setAttendanceDateFilter(e.target.value)}
+              className="attendance-date-filter"
+            />
+            <button
+              type="button"
+              className="btn-action attendance-page-btn"
+              onClick={() => loadAttendance(1)}
+              disabled={attendanceLoading}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {attendanceLoading ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading attendance...</p>
+          </div>
+        ) : attendanceError ? (
+          <div className="empty-state">
+            <div className="empty-icon">⚠️</div>
+            <h3>Unable to load attendance</h3>
+            <p>{attendanceError}</p>
+          </div>
+        ) : attendanceLogs.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📭</div>
+            <h3>No attendance records found</h3>
+            <p>Try a different date or role filter.</p>
+          </div>
+        ) : (
+          <div className="attendance-table-wrapper">
+            <div className="users-table-container">
+              <table className="users-table attendance-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Date</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Scans</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendanceLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td className="user-name">{log.name}</td>
+                      <td>
+                        <span className={`role-badge role-${log.role}`}>
+                          {log.role}
+                        </span>
+                      </td>
+                      <td>{log.date || 'N/A'}</td>
+                      <td>{log.timeInFormatted || log.time || 'N/A'}</td>
+                      <td>
+                        {log.timeOutFormatted ? (
+                          log.timeOutFormatted
+                        ) : (
+                          <span className="time-pending">Pending</span>
+                        )}
+                      </td>
+                      <td>{log.scanCount || 1}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="attendance-pagination">
+              <button
+                type="button"
+                className="btn-action attendance-page-btn"
+                onClick={() => loadAttendance(attendancePage - 1)}
+                disabled={attendanceLoading || attendancePage <= 1}
+              >
+                Previous
+              </button>
+              <span className="attendance-page-indicator">
+                Page {attendancePages === 0 ? 0 : attendancePage} of {attendancePages}
+              </span>
+              <button
+                type="button"
+                className="btn-action attendance-page-btn"
+                onClick={() => loadAttendance(attendancePage + 1)}
+                disabled={attendanceLoading || attendancePage >= attendancePages}
+              >
+                Next
+              </button>
+            </div>
+
+            <div className="attendance-pagination-summary">
+              Showing {startRecord}-{endRecord} of {attendanceTotal} attendance records
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="superadmin-dashboard">
       {/* Top Header */}
@@ -548,6 +722,12 @@ const SuperAdminDashboard = () => {
           >
             👥 All Users
           </button>
+          <button
+            className={`nav-tab ${activeTab === 'attendance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('attendance')}
+          >
+            🕒 Attendance
+          </button>
           {currentUser?.role === 'superadmin' && (
             <button
               className={`nav-tab ${activeTab === 'admins' ? 'active' : ''}`}
@@ -566,6 +746,7 @@ const SuperAdminDashboard = () => {
       <div className="dashboard-content">
         {activeTab === 'overview' && renderOverviewTab()}
         {activeTab === 'users' && renderUsersTab()}
+        {activeTab === 'attendance' && renderAttendanceTab()}
       </div>
 
       {/* Add/Edit User Modal */}
