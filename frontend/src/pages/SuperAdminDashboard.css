@@ -383,6 +383,51 @@
   text-align: right;
 }
 
+.action-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.action-user-email {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.action-type-badge {
+  padding: 0.35rem 0.7rem;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.action-login {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.action-logout {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.action-attendance_time_in {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.action-attendance_time_out {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.action-unknown {
+  background: #f3f4f6;
+  color: #374151;
+}
+
 /* Role Badges */
 .role-badge {
   padding: 0.4rem 0.8rem;

@@ -288,6 +288,21 @@ export const getAttendance = async (filters = {}) => {
   }
 };
 
+/**
+ * Get unified action logs (superadmin only)
+ * @param {Object} filters - { role, actionType, startDate, endDate, page, limit }
+ * @returns {Promise} Response from API
+ */
+export const getActionLogs = async (filters = {}) => {
+  try {
+    const response = await api.get('/login-logs/actions', { params: filters });
+    return response.data;
+  } catch (error) {
+    console.error('Get action logs error:', error);
+    throw error;
+  }
+};
+
 // ========== KIOSK ==========
 
 /**

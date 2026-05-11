@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance } from '../services/api';
+import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance, getActionLogs } from '../services/api';
 import './SuperAdminDashboard.css';
 
 const SuperAdminDashboard = () => {
@@ -11,7 +11,7 @@ const SuperAdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, users, attendance, admins
+  const [activeTab, setActiveTab] = useState('overview'); // overview, users, attendance, actionLogs, admins
   const [selectedRole, setSelectedRole] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [attendanceLogs, setAttendanceLogs] = useState([]);
@@ -23,6 +23,16 @@ const SuperAdminDashboard = () => {
   const [attendancePages, setAttendancePages] = useState(0);
   const [attendanceTotal, setAttendanceTotal] = useState(0);
   const attendanceLimit = 10;
+  const [actionLogs, setActionLogs] = useState([]);
+  const [actionLogsLoading, setActionLogsLoading] = useState(false);
+  const [actionLogsError, setActionLogsError] = useState(null);
+  const [actionRoleFilter, setActionRoleFilter] = useState('all');
+  const [actionTypeFilter, setActionTypeFilter] = useState('all');
+  const [actionDateFilter, setActionDateFilter] = useState('');
+  const [actionPage, setActionPage] = useState(1);
+  const [actionPages, setActionPages] = useState(0);
+  const [actionTotal, setActionTotal] = useState(0);
+  const actionLimit = 20;
 
   // Department options for React Select
   const departmentOptions = [
@@ -167,6 +177,54 @@ const SuperAdminDashboard = () => {
       loadAttendance(1);
     }
   }, [activeTab, currentUser, attendanceRoleFilter, attendanceDateFilter, loadAttendance]);
+
+  const loadActionLogsData = useCallback(async (page = 1) => {
+    try {
+      setActionLogsLoading(true);
+      setActionLogsError(null);
+
+      const filters = {
+        page,
+        limit: actionLimit,
+      };
+
+      if (actionRoleFilter !== 'all') {
+        filters.role = actionRoleFilter;
+      }
+
+      if (actionTypeFilter !== 'all') {
+        filters.actionType = actionTypeFilter;
+      }
+
+      if (actionDateFilter) {
+        filters.startDate = actionDateFilter;
+        filters.endDate = actionDateFilter;
+      }
+
+      const response = await getActionLogs(filters);
+
+      if (response?.success) {
+        setActionLogs(response.data || []);
+        setActionTotal(response.total || 0);
+        setActionPage(response.page || page);
+        setActionPages(response.pages || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load action logs:', err);
+      setActionLogsError(err.response?.data?.message || 'Failed to load action logs');
+      setActionLogs([]);
+      setActionTotal(0);
+      setActionPages(0);
+    } finally {
+      setActionLogsLoading(false);
+    }
+  }, [actionRoleFilter, actionTypeFilter, actionDateFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'actionLogs' && currentUser?.role === 'superadmin') {
+      loadActionLogsData(1);
+    }
+  }, [activeTab, currentUser, actionRoleFilter, actionTypeFilter, actionDateFilter, loadActionLogsData]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -405,18 +463,6 @@ const SuperAdminDashboard = () => {
               <p>Create administrator account with full access</p>
             </div>
           )}
-          
-          <div className="action-card" onClick={() => openAddModal('teacher')}>
-            <div className="action-icon action-teacher">👨‍🏫</div>
-            <h3>Add Teacher</h3>
-            <p>Register new teacher account</p>
-          </div>
-          
-          <div className="action-card" onClick={() => openAddModal('student')}>
-            <div className="action-icon action-student">👨‍🎓</div>
-            <h3>Add Student</h3>
-            <p>Enroll new student with face recognition</p>
-          </div>
           
           <div className="action-card" onClick={() => setActiveTab('users')}>
             <div className="action-icon action-view">📋</div>
@@ -681,6 +727,148 @@ const SuperAdminDashboard = () => {
     );
   };
 
+  const renderActionLogsTab = () => {
+    const startRecord = actionTotal === 0 ? 0 : (actionPage - 1) * actionLimit + 1;
+    const endRecord = Math.min(actionPage * actionLimit, actionTotal);
+
+    return (
+      <div className="attendance-content">
+        <div className="users-header">
+          <h2 className="section-title">🧾 Action Logs</h2>
+          <div className="attendance-controls">
+            <select
+              value={actionRoleFilter}
+              onChange={(e) => setActionRoleFilter(e.target.value)}
+              className="role-filter"
+            >
+              <option value="all">All Roles</option>
+              <option value="superadmin">Superadmin</option>
+              <option value="admin">Admin</option>
+              <option value="teacher">Teacher</option>
+              <option value="student">Student</option>
+            </select>
+            <select
+              value={actionTypeFilter}
+              onChange={(e) => setActionTypeFilter(e.target.value)}
+              className="role-filter"
+            >
+              <option value="all">All Actions</option>
+              <option value="login">Login</option>
+              <option value="logout">Logout</option>
+              <option value="attendance_time_in">Attendance Time In</option>
+              <option value="attendance_time_out">Attendance Time Out</option>
+            </select>
+            <input
+              type="date"
+              value={actionDateFilter}
+              onChange={(e) => setActionDateFilter(e.target.value)}
+              className="attendance-date-filter"
+            />
+            <button
+              type="button"
+              className="btn-action attendance-page-btn"
+              onClick={() => loadActionLogsData(1)}
+              disabled={actionLogsLoading}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {actionLogsLoading ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading action logs...</p>
+          </div>
+        ) : actionLogsError ? (
+          <div className="empty-state">
+            <div className="empty-icon">⚠️</div>
+            <h3>Unable to load action logs</h3>
+            <p>{actionLogsError}</p>
+          </div>
+        ) : actionLogs.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📭</div>
+            <h3>No action logs found</h3>
+            <p>Try a different date, role, or action filter.</p>
+          </div>
+        ) : (
+          <div className="attendance-table-wrapper">
+            <div className="users-table-container">
+              <table className="users-table attendance-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                    <th>Source</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {actionLogs.map((log, index) => (
+                    <tr key={`${log.actionId || 'action'}-${log.actionType || 'type'}-${index}`}>
+                      <td>
+                        {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                      </td>
+                      <td>
+                        <div className="action-user-cell">
+                          <span className="user-name">{log.userName || 'Unknown User'}</span>
+                          {log.userEmail && (
+                            <span className="action-user-email">{log.userEmail}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`role-badge role-${log.role || 'student'}`}>
+                          {log.role || 'unknown'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`action-type-badge action-${log.actionType || 'unknown'}`}>
+                          {log.actionType ? log.actionType.replaceAll('_', ' ') : 'unknown'}
+                        </span>
+                      </td>
+                      <td>{log.source || 'N/A'}</td>
+                      <td>{log.description || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="attendance-pagination">
+              <button
+                type="button"
+                className="btn-action attendance-page-btn"
+                onClick={() => loadActionLogsData(actionPage - 1)}
+                disabled={actionLogsLoading || actionPage <= 1}
+              >
+                Previous
+              </button>
+              <span className="attendance-page-indicator">
+                Page {actionPages === 0 ? 0 : actionPage} of {actionPages}
+              </span>
+              <button
+                type="button"
+                className="btn-action attendance-page-btn"
+                onClick={() => loadActionLogsData(actionPage + 1)}
+                disabled={actionLogsLoading || actionPage >= actionPages}
+              >
+                Next
+              </button>
+            </div>
+
+            <div className="attendance-pagination-summary">
+              Showing {startRecord}-{endRecord} of {actionTotal} action logs
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="superadmin-dashboard">
       {/* Top Header */}
@@ -730,6 +918,14 @@ const SuperAdminDashboard = () => {
           </button>
           {currentUser?.role === 'superadmin' && (
             <button
+              className={`nav-tab ${activeTab === 'actionLogs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('actionLogs')}
+            >
+              🧾 Action Logs
+            </button>
+          )}
+          {currentUser?.role === 'superadmin' && (
+            <button
               className={`nav-tab ${activeTab === 'admins' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('users');
@@ -747,6 +943,7 @@ const SuperAdminDashboard = () => {
         {activeTab === 'overview' && renderOverviewTab()}
         {activeTab === 'users' && renderUsersTab()}
         {activeTab === 'attendance' && renderAttendanceTab()}
+        {activeTab === 'actionLogs' && currentUser?.role === 'superadmin' && renderActionLogsTab()}
       </div>
 
       {/* Add/Edit User Modal */}
