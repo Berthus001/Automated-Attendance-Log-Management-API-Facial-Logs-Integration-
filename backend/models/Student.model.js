@@ -35,6 +35,17 @@ const studentSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      default: '',
+      validate: {
+        validator: function(v) {
+          return !v || /^\d+$/.test(v);
+        },
+        message: 'Phone number must contain only digits',
+      },
+    },
     isActive: {
       type: Boolean,
       default: true,

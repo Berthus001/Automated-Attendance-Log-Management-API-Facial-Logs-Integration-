@@ -38,6 +38,7 @@ const DashboardPage = () => {
     password: '',
     role: 'student',
     department: '',
+    phoneNumber: '',
   });
   const [capturedImage, setCapturedImage] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -220,6 +221,7 @@ const DashboardPage = () => {
       password: '',
       role: 'student',
       department: '',
+      phoneNumber: '',
     });
     setCapturedImage(null);
     setFormError(null);
@@ -235,6 +237,7 @@ const DashboardPage = () => {
       password: '', // Don't pre-fill password
       role: user.role,
       department: user.department || '',
+      phoneNumber: user.phoneNumber || '',
     });
     setCapturedImage(null);
     setFormError(null);
@@ -285,6 +288,7 @@ const DashboardPage = () => {
         email: formData.email.trim(),
         role: formData.role,
         department: formData.department || '',
+        phoneNumber: formData.phoneNumber.trim(),
       };
 
       if (formData.password.trim()) {
@@ -306,7 +310,7 @@ const DashboardPage = () => {
         // Reload users list
         await loadUsers();
         setShowModal(false);
-        setFormData({ name: '', email: '', password: '', role: 'student', department: '' });
+        setFormData({ name: '', email: '', password: '', role: 'student', department: '', phoneNumber: '' });
         setCapturedImage(null);
       }
     } catch (error) {
@@ -795,6 +799,25 @@ const DashboardPage = () => {
                     placeholder="Computer Science"
                     className="form-input"
                     disabled={formLoading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="phoneNumber">Phone Number</label>
+                  <input
+                    type="text"
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 1234567890"
+                    className="form-input"
+                    disabled={formLoading}
+                    onKeyPress={(e) => {
+                      if (!/\d/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
                   />
                 </div>
               </div>

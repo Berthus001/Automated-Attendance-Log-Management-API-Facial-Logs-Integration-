@@ -2,6 +2,7 @@ const { Student, AttendanceLog } = require('../models');
 const { processBase64Image } = require('../utils/imageProcessor');
 const { extractFaceDescriptorFromBase64, compareFaceDescriptors } = require('../utils/faceDetection');
 const { isValidBase64Image } = require('../utils/imageHelpers');
+const smsService = require('../utils/smsService');
 
 /**
  * Face login for attendance logging
@@ -98,6 +99,19 @@ exports.faceLogin = async (req, res) => {
       status: 'present',
       location: location || undefined,
     });
+
+    // Send SMS notification if phone number exists
+    if (bestMatch.phoneNumber) {
+      smsService.sendTimeInSMS(bestMatch.phoneNumber, bestMatch.name, attendanceLog.timestamp)
+        .then(result => {
+          if (result.success) {
+            console.log(`SMS notification sent to ${bestMatch.name}`);
+          } else {
+            console.log(`SMS notification failed for ${bestMatch.name}: ${result.message}`);
+          }
+        })
+        .catch(error => console.error('SMS sending error:', error));
+    }
 
     // Return success with matched student and attendance log
     res.status(200).json({

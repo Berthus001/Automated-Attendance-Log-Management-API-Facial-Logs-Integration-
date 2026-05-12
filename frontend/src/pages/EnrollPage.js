@@ -8,7 +8,8 @@ const EnrollPage = () => {
   const [formData, setFormData] = useState({
     studentId: '',
     name: '',
-    course: ''
+    course: '',
+    phoneNumber: ''
   });
   
   // Webcam state
@@ -74,6 +75,7 @@ const EnrollPage = () => {
         studentId: formData.studentId.trim(),
         name: formData.name.trim(),
         course: formData.course.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
         image: capturedImage // Base64 JPEG string
       };
 
@@ -91,7 +93,8 @@ const EnrollPage = () => {
         setFormData({
           studentId: '',
           name: '',
-          course: ''
+          course: '',
+          phoneNumber: ''
         });
         setCapturedImage(null);
       } else {
@@ -194,6 +197,25 @@ const EnrollPage = () => {
                   <option value="Graphic Design">Graphic Design</option>
                   <option value="Multimedia Arts">Multimedia Arts</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phoneNumber">Phone Number</label>
+                <input
+                  type="text"
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 1234567890"
+                  className="form-input"
+                  disabled={loading}
+                  onKeyPress={(e) => {
+                    if (!/\d/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               </div>
 
               <div className="form-info">

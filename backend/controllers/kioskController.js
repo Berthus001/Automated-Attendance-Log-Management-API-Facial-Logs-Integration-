@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const AttendanceLog = require('../models/AttendanceLog.model');
 const { processBase64Image } = require('../utils/imageProcessor');
 const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
+const smsService = require('../utils/smsService');
 
 const KIOSK_MATCH_THRESHOLD = 0.45;
 
@@ -14,13 +15,14 @@ exports.getKioskDescriptors = async (req, res) => {
       role: { $in: ['student', 'teacher'] },
       isActive: true,
       faceDescriptor: { $exists: true, $not: { $size: 0 } },
-    }).select('_id name role department faceDescriptor createdBy');
+    }).select('_id name role department phoneNumber faceDescriptor createdBy');
 
     const descriptors = users.map((u) => ({
       _id: u._id,
       name: u.name,
       role: u.role,
       department: u.department || '',
+      phoneNumber: u.phoneNumber || '',
       faceDescriptor: u.faceDescriptor,
       createdBy: u.createdBy || null,
     }));
@@ -141,6 +143,11 @@ exports.recordKioskAttendance = async (req, res) => {
       existing.scanCount = 2;
       await existing.save();
 
+      // Send time-out SMS if phone number exists
+      if (user.phoneNumber) {
+        await smsService.sendTimeOutSMS(user.phoneNumber, user.name, existing.timeOut);
+      }
+
       return res.status(200).json({
         success: true,
         scanType: 'time-out',
@@ -189,6 +196,11 @@ exports.recordKioskAttendance = async (req, res) => {
       location: req.body.location || undefined,
       createdBy: user.createdBy || null,
     });
+
+    // Send time-in SMS if phone number exists
+    if (user.phoneNumber) {
+      await smsService.sendTimeInSMS(user.phoneNumber, user.name, attendanceLog.timeIn);
+    }
 
     return res.status(201).json({
       success: true,
