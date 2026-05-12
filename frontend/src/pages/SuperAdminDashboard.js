@@ -323,9 +323,10 @@ const SuperAdminDashboard = () => {
     setFormError(null);
   };
 
+  const roleRequiresCredentials = formData.role === 'admin' || formData.role === 'superadmin';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const roleRequiresCredentials = formData.role === 'admin' || formData.role === 'superadmin';
     
     if (!formData.name.trim()) {
       setFormError('Name is required');
@@ -1153,7 +1154,7 @@ const SuperAdminDashboard = () => {
                 />
               </div>
 
-              {(modalMode === 'edit' || formData.role === 'admin' || formData.role === 'superadmin') && (
+              {(modalMode === 'edit' || roleRequiresCredentials) && (
                 <>
                   <div className="form-group">
                     <label>Email Address</label>
