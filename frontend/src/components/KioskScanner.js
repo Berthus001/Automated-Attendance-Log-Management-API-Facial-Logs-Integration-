@@ -9,8 +9,8 @@ const DETECTION_INTERVAL_MS = 500;
 const COOLDOWN_SECONDS = 5;
 // Face match threshold (strict: distance must be < 0.45)
 const MATCH_THRESHOLD = 0.45;
-// Force-reset blocked/error states quickly to prevent UI from getting stuck
-const ERROR_RESET_MS = 3000;
+// Auto-remove error messages after 5 seconds
+const ERROR_RESET_MS = 5000;
 // Guard API call so "Identifying..." cannot stay forever on network issues
 const API_TIMEOUT_MS = 8000;
 // CDN for face-api models
@@ -460,6 +460,91 @@ const KioskScanner = () => {
             <p>{loadingMessage}</p>
           </div>
         )}
+
+        {/* Result card – overlaid at top of video during result + cooldown states */}
+        {status === 'result' || status === 'cooldown' ? (
+          <div className={`kiosk-result-card ${
+            result?.error
+              ? 'kiosk-result-error'
+              : result?.scanType === 'completed'
+              ? 'kiosk-result-completed'
+              : result?.scanType === 'time-out'
+              ? 'kiosk-result-timeout'
+              : 'kiosk-result-timein'
+          }`}>
+            {result?.error ? (
+              <>
+                <div className="kiosk-result-icon error-icon">✗</div>
+                <h3 className="kiosk-result-title">Not Recognized</h3>
+                <p className="kiosk-result-msg">{result.error}</p>
+              </>
+            ) : result?.scanType === 'completed' ? (
+              <>
+                <div className="kiosk-result-icon completed-icon">⚠</div>
+                <h3 className="kiosk-result-name">{result?.name}</h3>
+                <div className="kiosk-result-meta">
+                  <span className={`kiosk-role-badge role-${result?.role}`}>{roleLabel(result?.role)}</span>
+                  {result?.department && <span className="kiosk-dept">{result.department}</span>}
+                </div>
+                <div className="kiosk-status-row completed">
+                  <span className="status-dot" />
+                  Attendance already completed for today
+                </div>
+                <div className="kiosk-timeinout-row">
+                  <div className="timeinout-item">
+                    <span className="timeinout-label">Time In</span>
+                    <span className="timeinout-value">{result?.timeIn ? formatTime(result.timeIn) : '—'}</span>
+                  </div>
+                  <div className="timeinout-divider" />
+                  <div className="timeinout-item">
+                    <span className="timeinout-label">Time Out</span>
+                    <span className="timeinout-value">{result?.timeOut ? formatTime(result.timeOut) : '—'}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={`kiosk-result-icon ${result?.scanType === 'time-out' ? 'timeout-icon' : 'timein-icon'}`}>
+                  {result?.scanType === 'time-out' ? '👋' : '👋'}
+                </div>
+                <h3 className="kiosk-result-name">{result?.name}</h3>
+                <div className="kiosk-result-meta">
+                  <span className={`kiosk-role-badge role-${result?.role}`}>{roleLabel(result?.role)}</span>
+                  {result?.department && <span className="kiosk-dept">{result.department}</span>}
+                </div>
+                <div className={`kiosk-scan-type-badge ${result?.scanType === 'time-out' ? 'badge-timeout' : 'badge-timein'}`}>
+                  {result?.scanType === 'time-out' ? '🚪 Time Out Recorded' : '✅ Time In Recorded'}
+                </div>
+                <div className="kiosk-timeinout-row">
+                  <div className="timeinout-item">
+                    <span className="timeinout-label">Time In</span>
+                    <span className="timeinout-value">{result?.timeIn ? formatTime(result.timeIn) : '—'}</span>
+                  </div>
+                  {result?.scanType === 'time-out' && (
+                    <>
+                      <div className="timeinout-divider" />
+                      <div className="timeinout-item">
+                        <span className="timeinout-label">Time Out</span>
+                        <span className="timeinout-value">{result?.timeOut ? formatTime(result.timeOut) : '—'}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="kiosk-timestamp">
+                  <div className="ts-date">{result?.timeIn ? formatDate(result.timeIn) : ''}</div>
+                </div>
+              </>
+            )}
+            {status === 'cooldown' && (
+              <div className="kiosk-cooldown-bar-wrap">
+                <div
+                  className="kiosk-cooldown-bar"
+                  style={{ animationDuration: `${COOLDOWN_SECONDS}s` }}
+                />
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* Enrolled count indicator */}
@@ -468,91 +553,6 @@ const KioskScanner = () => {
           {descriptorCount} enrolled user{descriptorCount !== 1 ? 's' : ''}
         </div>
       )}
-
-      {/* Result card – shown during result + cooldown states */}
-      {status === 'result' || status === 'cooldown' ? (
-        <div className={`kiosk-result-card ${
-          result?.error
-            ? 'kiosk-result-error'
-            : result?.scanType === 'completed'
-            ? 'kiosk-result-completed'
-            : result?.scanType === 'time-out'
-            ? 'kiosk-result-timeout'
-            : 'kiosk-result-timein'
-        }`}>
-          {result?.error ? (
-            <>
-              <div className="kiosk-result-icon error-icon">✗</div>
-              <h3 className="kiosk-result-title">Not Recognized</h3>
-              <p className="kiosk-result-msg">{result.error}</p>
-            </>
-          ) : result?.scanType === 'completed' ? (
-            <>
-              <div className="kiosk-result-icon completed-icon">⚠</div>
-              <h3 className="kiosk-result-name">{result?.name}</h3>
-              <div className="kiosk-result-meta">
-                <span className={`kiosk-role-badge role-${result?.role}`}>{roleLabel(result?.role)}</span>
-                {result?.department && <span className="kiosk-dept">{result.department}</span>}
-              </div>
-              <div className="kiosk-status-row completed">
-                <span className="status-dot" />
-                Attendance already completed for today
-              </div>
-              <div className="kiosk-timeinout-row">
-                <div className="timeinout-item">
-                  <span className="timeinout-label">Time In</span>
-                  <span className="timeinout-value">{result?.timeIn ? formatTime(result.timeIn) : '—'}</span>
-                </div>
-                <div className="timeinout-divider" />
-                <div className="timeinout-item">
-                  <span className="timeinout-label">Time Out</span>
-                  <span className="timeinout-value">{result?.timeOut ? formatTime(result.timeOut) : '—'}</span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className={`kiosk-result-icon ${result?.scanType === 'time-out' ? 'timeout-icon' : 'timein-icon'}`}>
-                {result?.scanType === 'time-out' ? '👋' : '👋'}
-              </div>
-              <h3 className="kiosk-result-name">{result?.name}</h3>
-              <div className="kiosk-result-meta">
-                <span className={`kiosk-role-badge role-${result?.role}`}>{roleLabel(result?.role)}</span>
-                {result?.department && <span className="kiosk-dept">{result.department}</span>}
-              </div>
-              <div className={`kiosk-scan-type-badge ${result?.scanType === 'time-out' ? 'badge-timeout' : 'badge-timein'}`}>
-                {result?.scanType === 'time-out' ? '🚪 Time Out Recorded' : '✅ Time In Recorded'}
-              </div>
-              <div className="kiosk-timeinout-row">
-                <div className="timeinout-item">
-                  <span className="timeinout-label">Time In</span>
-                  <span className="timeinout-value">{result?.timeIn ? formatTime(result.timeIn) : '—'}</span>
-                </div>
-                {result?.scanType === 'time-out' && (
-                  <>
-                    <div className="timeinout-divider" />
-                    <div className="timeinout-item">
-                      <span className="timeinout-label">Time Out</span>
-                      <span className="timeinout-value">{result?.timeOut ? formatTime(result.timeOut) : '—'}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="kiosk-timestamp">
-                <div className="ts-date">{result?.timeIn ? formatDate(result.timeIn) : ''}</div>
-              </div>
-            </>
-          )}
-          {status === 'cooldown' && (
-            <div className="kiosk-cooldown-bar-wrap">
-              <div
-                className="kiosk-cooldown-bar"
-                style={{ animationDuration: `${COOLDOWN_SECONDS}s` }}
-              />
-            </div>
-          )}
-        </div>
-      ) : null}
     </div>
   );
 };
