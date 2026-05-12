@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance, logout } from '../services/api';
+import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance, logout, exportAttendancePDF } from '../services/api';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
@@ -154,6 +154,47 @@ const DashboardPage = () => {
       loadAttendance(1);
     }
   }, [activeTab, currentUser, attendanceRoleFilter, attendanceStartDateFilter, attendanceEndDateFilter, attendanceStudentFilter, attendanceCourseFilter, loadAttendance]);
+
+  const handleExportPDF = async () => {
+    try {
+      const filters = {};
+
+      if (attendanceRoleFilter !== 'all') {
+        filters.role = attendanceRoleFilter;
+      }
+
+      if (attendanceStartDateFilter) {
+        filters.startDate = attendanceStartDateFilter;
+      }
+
+      if (attendanceEndDateFilter) {
+        filters.endDate = attendanceEndDateFilter;
+      }
+
+      if (attendanceStudentFilter.trim()) {
+        filters.student = attendanceStudentFilter.trim();
+      }
+
+      if (attendanceCourseFilter.trim()) {
+        filters.course = attendanceCourseFilter.trim();
+      }
+
+      const blob = await exportAttendancePDF(filters);
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `attendance-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export PDF error:', error);
+      alert('Failed to export PDF. Please try again.');
+    }
+  };
 
   // Handle logout
   const handleLogout = async () => {
@@ -392,6 +433,15 @@ const DashboardPage = () => {
                 disabled={attendanceLoading}
               >
                 Refresh
+              </button>
+              <button
+                type="button"
+                className="btn-icon attendance-page-btn"
+                onClick={handleExportPDF}
+                disabled={attendanceLoading}
+                style={{ marginLeft: '8px', backgroundColor: '#dc2626' }}
+              >
+                📄 Export PDF
               </button>
             </div>
           </div>

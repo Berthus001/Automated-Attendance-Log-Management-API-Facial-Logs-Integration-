@@ -289,6 +289,24 @@ export const getAttendance = async (filters = {}) => {
 };
 
 /**
+ * Export attendance data to PDF
+ * @param {Object} filters - { role, startDate, endDate, student, course }
+ * @returns {Promise} PDF blob
+ */
+export const exportAttendancePDF = async (filters = {}) => {
+  try {
+    const response = await api.get('/attendance/export-pdf', {
+      params: filters,
+      responseType: 'blob' // Important for PDF download
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Export PDF error:', error);
+    throw error;
+  }
+};
+
+/**
  * Get unified action logs (superadmin only)
  * @param {Object} filters - { role, actionType, startDate, endDate, page, limit }
  * @returns {Promise} Response from API
