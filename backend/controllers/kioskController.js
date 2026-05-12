@@ -115,37 +115,21 @@ exports.recordKioskAttendance = async (req, res) => {
     const endOfDay = new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const existing = await AttendanceLog.findOne({
+    const openAttendance = await AttendanceLog.findOne({
       userId: user._id,
       timestamp: { $gte: startOfDay, $lte: endOfDay },
-    });
+      scanCount: 1,
+    }).sort({ timestamp: -1 });
 
-    // ── THIRD SCAN (or beyond) ──────────────────────────────────────────────
-    if (existing && existing.scanCount >= 2) {
-      return res.status(400).json({
-        success: false,
-        scanType: 'completed',
-        message: 'Attendance already completed for today',
-        data: {
-          userId: user._id,
-          name: user.name,
-          role: user.role,
-          department: user.department || '',
-          timeIn: existing.timeIn,
-          timeOut: existing.timeOut,
-        },
-      });
-    }
-
-    // ── SECOND SCAN (time-out) ──────────────────────────────────────────────
-    if (existing && existing.scanCount === 1) {
-      existing.timeOut = now;
-      existing.scanCount = 2;
-      await existing.save();
+    // ── SECOND SCAN (time-out of an open attendance record) ─────────────────
+    if (openAttendance) {
+      openAttendance.timeOut = now;
+      openAttendance.scanCount = 2;
+      await openAttendance.save();
 
       // Send time-out SMS if phone number exists
       if (user.phoneNumber) {
-        await smsService.sendTimeOutSMS(user.phoneNumber, user.name, existing.timeOut);
+        await smsService.sendTimeOutSMS(user.phoneNumber, user.name, openAttendance.timeOut);
       }
 
       return res.status(200).json({
@@ -157,9 +141,9 @@ exports.recordKioskAttendance = async (req, res) => {
           name: user.name,
           role: user.role,
           department: user.department || '',
-          timeIn: existing.timeIn,
-          timeOut: existing.timeOut,
-          timestamp: existing.timestamp,
+          timeIn: openAttendance.timeIn,
+          timeOut: openAttendance.timeOut,
+          timestamp: openAttendance.timestamp,
         },
       });
     }
