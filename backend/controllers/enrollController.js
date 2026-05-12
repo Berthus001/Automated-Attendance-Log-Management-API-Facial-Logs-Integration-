@@ -1,7 +1,11 @@
 const { Student } = require('../models');
 const User = require('../models/User.model');
 const { processBase64Image } = require('../utils/imageProcessor');
-const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
+const {
+  extractFaceDescriptorFromBase64,
+  compareFaces,
+  getFaceDuplicateThreshold,
+} = require('../utils/faceDetection');
 const { isValidBase64Image } = require('../utils/imageHelpers');
 
 /**
@@ -60,7 +64,7 @@ exports.enrollStudent = async (req, res) => {
     }
 
     // Block duplicate face across existing students and users
-    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
+    const duplicateFaceThreshold = getFaceDuplicateThreshold();
 
     const enrolledStudents = await Student.find({
       faceDescriptor: { $exists: true, $ne: [] },
@@ -226,7 +230,7 @@ exports.updateEnrolledStudent = async (req, res) => {
       }
 
       // Block duplicate face on re-enrollment/update (exclude current student)
-      const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
+      const duplicateFaceThreshold = getFaceDuplicateThreshold();
 
       const otherStudents = await Student.find({
         studentId: { $ne: student.studentId },

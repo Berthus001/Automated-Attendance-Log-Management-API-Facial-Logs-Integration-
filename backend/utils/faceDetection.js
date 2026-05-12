@@ -264,6 +264,20 @@ const compareFaces = (desc1, desc2, threshold = 0.6) => {
   };
 };
 
+/**
+ * Resolve duplicate-face threshold from environment with sane bounds.
+ * Falls back to default when value is missing/invalid/out of range.
+ * @param {number} fallback - Default threshold to use when env value is invalid
+ * @returns {number}
+ */
+const getFaceDuplicateThreshold = (fallback = 0.6) => {
+  const value = Number(process.env.FACE_DUPLICATE_THRESHOLD);
+  if (!Number.isFinite(value) || value <= 0 || value > 1) {
+    return fallback;
+  }
+  return value;
+};
+
 module.exports = {
   loadModels,
   extractFaceDescriptor,
@@ -272,4 +286,5 @@ module.exports = {
   isFaceMatch,
   getFaceDescriptor,
   compareFaces,
+  getFaceDuplicateThreshold,
 };

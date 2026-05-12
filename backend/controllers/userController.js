@@ -1,7 +1,12 @@
 const User = require('../models/User.model');
 const Student = require('../models/Student.model');
 const AdminActionLog = require('../models/AdminActionLog.model');
-const { loadModels, extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
+const {
+  loadModels,
+  extractFaceDescriptorFromBase64,
+  compareFaces,
+  getFaceDuplicateThreshold,
+} = require('../utils/faceDetection');
 
 // Load face recognition models on startup
 loadModels().catch((error) => {
@@ -148,7 +153,7 @@ exports.createUser = async (req, res) => {
       faceDescriptor: { $exists: true, $ne: [] },
     }).select('_id name email role faceDescriptor');
 
-    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
+    const duplicateFaceThreshold = getFaceDuplicateThreshold();
     for (const existingFaceUser of existingFaceUsers) {
       const comparison = compareFaces(existingFaceUser.faceDescriptor, faceDescriptor, duplicateFaceThreshold);
       if (comparison.isMatch) {
