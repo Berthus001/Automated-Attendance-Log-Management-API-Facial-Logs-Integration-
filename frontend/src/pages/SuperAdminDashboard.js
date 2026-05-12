@@ -527,6 +527,21 @@ const SuperAdminDashboard = () => {
               <p>Create administrator account with full access</p>
             </div>
           )}
+
+          {currentUser?.role === 'admin' && (
+            <>
+              <div className="action-card" onClick={() => openAddModal('student')}>
+                <div className="action-icon action-view">🎓</div>
+                <h3>Add New Student</h3>
+                <p>Create student account</p>
+              </div>
+              <div className="action-card" onClick={() => openAddModal('teacher')}>
+                <div className="action-icon action-view">👨‍🏫</div>
+                <h3>Add New Teacher</h3>
+                <p>Create teacher account</p>
+              </div>
+            </>
+          )}
           
           <div className="action-card" onClick={() => setActiveTab('users')}>
             <div className="action-icon action-view">📋</div>
@@ -569,6 +584,24 @@ const SuperAdminDashboard = () => {
       <div className="users-header">
         <h2 className="section-title">{adminsOnly ? '🛡️ Administrators' : '👥 All Users'}</h2>
         <div className="users-controls">
+          {!adminsOnly && currentUser?.role === 'admin' && (
+            <>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => openAddModal('student')}
+              >
+                ➕ Add Student
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => openAddModal('teacher')}
+              >
+                ➕ Add Teacher
+              </button>
+            </>
+          )}
           <input
             type="text"
             placeholder="🔍 Search users..."
