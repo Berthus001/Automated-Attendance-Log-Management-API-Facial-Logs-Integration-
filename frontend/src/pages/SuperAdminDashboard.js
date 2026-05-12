@@ -608,6 +608,7 @@ const SuperAdminDashboard = () => {
                 <th>Status</th>
                 <th>Face Enrolled</th>
                 <th>Created</th>
+                <th>Created By</th>
                 {adminsOnly && <th>Actions</th>}
               </tr>
             </thead>
@@ -638,6 +639,16 @@ const SuperAdminDashboard = () => {
                   </td>
                   <td className="date-cell">
                     {new Date(user.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="date-cell">
+                    {user.createdBy?.name ? (
+                      <>
+                        {user.createdBy.name}
+                        {user.createdBy.role ? ` (${user.createdBy.role})` : ''}
+                      </>
+                    ) : (
+                      'System'
+                    )}
                   </td>
                   {adminsOnly && (
                     <td className="actions-cell">

@@ -575,6 +575,190 @@ exports.getActionLogs = async (req, res) => {
       },
     ];
 
+    const legacyUserCreatedMatch = {
+      createdBy: { $ne: null },
+    };
+
+    if (start || end) {
+      legacyUserCreatedMatch.createdAt = {};
+      if (start) {
+        legacyUserCreatedMatch.createdAt.$gte = start;
+      }
+      if (end) {
+        legacyUserCreatedMatch.createdAt.$lte = end;
+      }
+    }
+
+    if (userId) {
+      legacyUserCreatedMatch.createdBy = new mongoose.Types.ObjectId(userId);
+    }
+
+    const legacyUserCreatedPipeline = [
+      { $match: legacyUserCreatedMatch },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'actor',
+        },
+      },
+      { $unwind: { path: '$actor', preserveNullAndEmptyArrays: false } },
+      ...(role
+        ? [{ $match: { 'actor.role': role } }]
+        : []),
+      {
+        $lookup: {
+          from: AdminActionLog.collection.name,
+          let: { targetUserId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$targetUserId', '$$targetUserId'] },
+                    { $eq: ['$actionType', 'user_created'] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
+          as: 'existingCreateLog',
+        },
+      },
+      {
+        $match: {
+          existingCreateLog: { $size: 0 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          actionId: { $concat: ['legacy-create-', { $toString: '$_id' }] },
+          userId: '$actor._id',
+          userName: '$actor.name',
+          userEmail: '$actor.email',
+          role: '$actor.role',
+          actionType: { $literal: 'user_created' },
+          description: {
+            $concat: [
+              { $ifNull: ['$actor.name', 'Unknown User'] },
+              ' created a new ',
+              { $ifNull: ['$role', 'user'] },
+              ' account (',
+              { $ifNull: ['$name', 'Unknown User'] },
+              ')',
+            ],
+          },
+          timestamp: '$createdAt',
+          source: { $literal: 'user_management' },
+          ipAddress: { $literal: null },
+          userAgent: { $literal: null },
+        },
+      },
+    ];
+
+    const legacyUserUpdatedMatch = {
+      createdBy: { $ne: null },
+      $expr: { $gt: ['$updatedAt', '$createdAt'] },
+    };
+
+    if (start || end) {
+      legacyUserUpdatedMatch.updatedAt = {};
+      if (start) {
+        legacyUserUpdatedMatch.updatedAt.$gte = start;
+      }
+      if (end) {
+        legacyUserUpdatedMatch.updatedAt.$lte = end;
+      }
+    }
+
+    if (userId) {
+      legacyUserUpdatedMatch.createdBy = new mongoose.Types.ObjectId(userId);
+    }
+
+    const legacyUserUpdatedRoleFilterStages =
+      actionType === 'admin_updated'
+        ? [{ $match: { role: 'admin' } }]
+        : actionType === 'user_updated'
+          ? [{ $match: { role: { $ne: 'admin' } } }]
+          : [];
+
+    const legacyUserUpdatedPipeline = [
+      { $match: legacyUserUpdatedMatch },
+      ...legacyUserUpdatedRoleFilterStages,
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'actor',
+        },
+      },
+      { $unwind: { path: '$actor', preserveNullAndEmptyArrays: false } },
+      ...(role
+        ? [{ $match: { 'actor.role': role } }]
+        : []),
+      {
+        $lookup: {
+          from: AdminActionLog.collection.name,
+          let: { targetUserId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$targetUserId', '$$targetUserId'] },
+                    {
+                      $in: [
+                        '$actionType',
+                        ['user_updated', 'admin_updated', 'admin_suspended', 'admin_activated'],
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
+          as: 'existingUpdateLog',
+        },
+      },
+      {
+        $match: {
+          existingUpdateLog: { $size: 0 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          actionId: { $concat: ['legacy-update-', { $toString: '$_id' }] },
+          userId: '$actor._id',
+          userName: '$actor.name',
+          userEmail: '$actor.email',
+          role: '$actor.role',
+          actionType: {
+            $cond: [{ $eq: ['$role', 'admin'] }, 'admin_updated', 'user_updated'],
+          },
+          description: {
+            $concat: [
+              { $ifNull: ['$actor.name', 'Unknown User'] },
+              ' edited ',
+              { $ifNull: ['$role', 'user'] },
+              ' account (',
+              { $ifNull: ['$name', 'Unknown User'] },
+              ')',
+            ],
+          },
+          timestamp: '$updatedAt',
+          source: { $literal: 'user_management' },
+          ipAddress: { $literal: null },
+          userAgent: { $literal: null },
+        },
+      },
+    ];
+
     const actionPipelines = [];
     if (actionType === 'all' || actionType === 'login') {
       actionPipelines.push({ coll: LoginLog.collection.name, pipeline: loginPipeline });
@@ -599,6 +783,12 @@ exports.getActionLogs = async (req, res) => {
       actionType === 'admin_deleted'
     ) {
       actionPipelines.push({ coll: AdminActionLog.collection.name, pipeline: adminActionPipeline });
+    }
+    if (actionType === 'all' || actionType === 'user_created') {
+      actionPipelines.push({ coll: User.collection.name, pipeline: legacyUserCreatedPipeline });
+    }
+    if (actionType === 'all' || actionType === 'user_updated' || actionType === 'admin_updated') {
+      actionPipelines.push({ coll: User.collection.name, pipeline: legacyUserUpdatedPipeline });
     }
 
     if (actionPipelines.length === 0) {
