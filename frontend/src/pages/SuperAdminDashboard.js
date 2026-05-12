@@ -110,6 +110,7 @@ const SuperAdminDashboard = () => {
     password: '',
     role: 'student',
     department: '',
+    phoneNumber: '',
   });
   const [capturedImage, setCapturedImage] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -341,6 +342,7 @@ const SuperAdminDashboard = () => {
       password: '',
       role: roleType,
       department: '',
+      phoneNumber: '',
     });
     setCapturedImage(null);
     setFormError(null);
@@ -356,6 +358,7 @@ const SuperAdminDashboard = () => {
       password: '',
       role: user.role,
       department: user.department || '',
+      phoneNumber: user.phoneNumber || '',
     });
     setCapturedImage(null);
     setFormError(null);
@@ -410,6 +413,10 @@ const SuperAdminDashboard = () => {
         department: formData.department || '',
       };
 
+      if (formData.phoneNumber.trim()) {
+        userData.phoneNumber = formData.phoneNumber.trim();
+      }
+
       if (roleRequiresCredentials && formData.email.trim()) {
         userData.email = formData.email.trim();
       }
@@ -438,6 +445,7 @@ const SuperAdminDashboard = () => {
           password: '',
           role: 'student',
           department: '',
+          phoneNumber: '',
         });
         setCapturedImage(null);
       }
@@ -711,6 +719,7 @@ const SuperAdminDashboard = () => {
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Phone</th>
                 <th>Status</th>
                 <th>Face Enrolled</th>
                 <th>Created</th>
@@ -733,6 +742,7 @@ const SuperAdminDashboard = () => {
                       {user.role}
                     </span>
                   </td>
+                  <td>{user.phoneNumber || '—'}</td>
                   <td>
                     <span className={`status-badge ${user.isActive ? 'status-active' : 'status-inactive'}`}>
                       {user.isActive ? '✓ Active' : '✗ Inactive'}
@@ -1323,6 +1333,26 @@ const SuperAdminDashboard = () => {
                     }),
                   }}
                 />
+              </div>
+
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input
+                  type="text"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter phone number"
+                  disabled={formLoading}
+                  onKeyPress={(e) => {
+                    if (!/\d/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
+                <small style={{ color: '#6b7280', marginTop: '6px', display: 'block' }}>
+                  Numbers only. Leave blank if not available.
+                </small>
               </div>
 
               {modalMode === 'add' && (
