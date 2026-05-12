@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const {
   getUsers,
@@ -10,7 +11,19 @@ const {
   getTeachers,
 } = require('../controllers/userController');
 const { protect, allowRoles } = require('../middleware/auth');
-const { userManagementWriteLimiter } = require('../middleware/rateLimit');
+
+const userManagementLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many user management requests, please try again later.',
+  },
+});
+
+router.use(userManagementLimiter);
 
 // Public routes - none
 
@@ -21,11 +34,11 @@ router.get('/teachers', protect, allowRoles('superadmin', 'admin'), getTeachers)
 // Protected routes - General user management
 router.route('/')
   .get(protect, allowRoles('superadmin', 'admin'), getUsers)
-  .post(protect, allowRoles('superadmin', 'admin'), userManagementWriteLimiter, createUser);
+  .post(protect, allowRoles('superadmin', 'admin'), createUser);
 
 router.route('/:id')
   .get(protect, getUser)
-  .put(protect, allowRoles('superadmin', 'admin'), userManagementWriteLimiter, updateUser)
-  .delete(protect, allowRoles('superadmin', 'admin'), userManagementWriteLimiter, deleteUser);
+  .put(protect, allowRoles('superadmin', 'admin'), updateUser)
+  .delete(protect, allowRoles('superadmin', 'admin'), deleteUser);
 
 module.exports = router;
