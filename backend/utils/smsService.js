@@ -27,14 +27,15 @@ const sendSemaphoreSMS = async (phoneNumber, message) => {
       ? `+63${phoneNumber.substring(1)}`
       : `+63${phoneNumber}`;
 
+    const params = new URLSearchParams();
+    params.append('apikey', apiKey);
+    params.append('number', formattedPhone);
+    params.append('message', message);
+    params.append('sendername', 'FacePass');
+
     const response = await axios.post(
       SEMAPHORE_API_URL,
-      {
-        apikey: apiKey,
-        number: formattedPhone,
-        message: message,
-        sendername: 'FacePass',
-      },
+      params,
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

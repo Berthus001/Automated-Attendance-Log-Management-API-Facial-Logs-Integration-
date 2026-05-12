@@ -1,13 +1,22 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGO_URI);
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
+    console.log("Connected to MongoDB Atlas");
+
+    global.isOfflineMode = false;
+
+  } catch (err) {
+
+    console.log("Atlas unavailable. Switching to local MongoDB...");
+
+    await mongoose.connect(process.env.MONGO_URI_LOCAL);
+
+    global.isOfflineMode = true;
+
+    console.log("Connected to Local MongoDB");
   }
 };
 

@@ -35,7 +35,7 @@ exports.faceLogin = async (req, res) => {
     }
 
     // Get all active students
-    const students = await Student.find({ isActive: true }).select('studentId name course faceDescriptor');
+    const students = await Student.find({ isActive: true }).select('studentId name course faceDescriptor phoneNumber');
 
     if (students.length === 0) {
       return res.status(404).json({
