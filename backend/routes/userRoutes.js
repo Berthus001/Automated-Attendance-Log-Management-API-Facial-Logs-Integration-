@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const {
   getUsers,
@@ -10,6 +11,19 @@ const {
   getTeachers,
 } = require('../controllers/userController');
 const { protect, allowRoles } = require('../middleware/auth');
+
+const userManagementLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many user management requests, please try again later.',
+  },
+});
+
+router.use(userManagementLimiter);
 
 // Public routes - none
 
