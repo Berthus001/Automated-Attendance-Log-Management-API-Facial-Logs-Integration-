@@ -343,6 +343,21 @@
   color: #111827;
 }
 
+.attendance-text-filter {
+  min-width: 220px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #111827;
+}
+
+.attendance-text-filter:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 .attendance-table th,
 .attendance-table td {
   text-align: left;

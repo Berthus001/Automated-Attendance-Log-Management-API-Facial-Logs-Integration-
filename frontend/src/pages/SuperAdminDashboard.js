@@ -19,6 +19,8 @@ const SuperAdminDashboard = () => {
   const [attendanceError, setAttendanceError] = useState(null);
   const [attendanceRoleFilter, setAttendanceRoleFilter] = useState('all');
   const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+  const [attendanceStudentFilter, setAttendanceStudentFilter] = useState('');
+  const [attendanceCourseFilter, setAttendanceCourseFilter] = useState('');
   const [attendancePage, setAttendancePage] = useState(1);
   const [attendancePages, setAttendancePages] = useState(0);
   const [attendanceTotal, setAttendanceTotal] = useState(0);
@@ -175,6 +177,14 @@ const SuperAdminDashboard = () => {
         filters.date = attendanceDateFilter;
       }
 
+      if (attendanceStudentFilter.trim()) {
+        filters.student = attendanceStudentFilter.trim();
+      }
+
+      if (attendanceCourseFilter.trim()) {
+        filters.course = attendanceCourseFilter.trim();
+      }
+
       const response = await getAttendance(filters);
 
       if (response?.success) {
@@ -192,13 +202,13 @@ const SuperAdminDashboard = () => {
     } finally {
       setAttendanceLoading(false);
     }
-  }, [attendanceRoleFilter, attendanceDateFilter]);
+  }, [attendanceRoleFilter, attendanceDateFilter, attendanceStudentFilter, attendanceCourseFilter]);
 
   useEffect(() => {
     if (activeTab === 'attendance' && currentUser) {
       loadAttendance(1);
     }
-  }, [activeTab, currentUser, attendanceRoleFilter, attendanceDateFilter, loadAttendance]);
+  }, [activeTab, currentUser, attendanceRoleFilter, attendanceDateFilter, attendanceStudentFilter, attendanceCourseFilter, loadAttendance]);
 
   const loadActionLogsData = useCallback(async (page = 1) => {
     try {
@@ -711,6 +721,20 @@ const SuperAdminDashboard = () => {
               onChange={(e) => setAttendanceDateFilter(e.target.value)}
               className="attendance-date-filter"
             />
+            <input
+              type="text"
+              value={attendanceStudentFilter}
+              onChange={(e) => setAttendanceStudentFilter(e.target.value)}
+              className="attendance-text-filter"
+              placeholder="Student name"
+            />
+            <input
+              type="text"
+              value={attendanceCourseFilter}
+              onChange={(e) => setAttendanceCourseFilter(e.target.value)}
+              className="attendance-text-filter"
+              placeholder="Course"
+            />
             <button
               type="button"
               className="btn-action attendance-page-btn"
@@ -737,7 +761,7 @@ const SuperAdminDashboard = () => {
           <div className="empty-state">
             <div className="empty-icon">📭</div>
             <h3>No attendance records found</h3>
-            <p>Try a different date or role filter.</p>
+            <p>Try different date, role, student, or course filters.</p>
           </div>
         ) : (
           <div className="attendance-table-wrapper">

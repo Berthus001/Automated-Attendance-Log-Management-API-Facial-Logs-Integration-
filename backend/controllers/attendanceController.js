@@ -1,5 +1,7 @@
 const AttendanceLog = require('../models/AttendanceLog.model');
 
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
  * Get attendance list for dashboard view.
  *
@@ -8,7 +10,7 @@ const AttendanceLog = require('../models/AttendanceLog.model');
  */
 exports.getAttendance = async (req, res) => {
   try {
-    const { role, date, page = '1', limit = '20' } = req.query;
+    const { role, date, student, course, page = '1', limit = '20' } = req.query;
 
     const parsedPage = Number.parseInt(page, 10);
     const parsedLimit = Number.parseInt(limit, 10);
@@ -72,6 +74,15 @@ exports.getAttendance = async (req, res) => {
         $gte: startOfDay,
         $lte: endOfDay,
       };
+    }
+
+    if (student && typeof student === 'string' && student.trim()) {
+      const studentPattern = new RegExp(escapeRegex(student.trim()), 'i');
+      query.userName = studentPattern;
+    }
+
+    if (course && typeof course === 'string' && course.trim()) {
+      query.course = new RegExp(escapeRegex(course.trim()), 'i');
     }
 
     const total = await AttendanceLog.countDocuments(query);

@@ -259,6 +259,21 @@
   transition: all 0.3s ease;
 }
 
+.attendance-text-filter {
+  min-width: 220px;
+  padding: 0.875rem 1rem;
+  border: 2px solid #dfe6e9;
+  border-radius: 8px;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.attendance-text-filter:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 .attendance-date-filter:focus {
   outline: none;
   border-color: #667eea;
