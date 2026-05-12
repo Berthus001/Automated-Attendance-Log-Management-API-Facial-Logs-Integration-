@@ -385,21 +385,9 @@ exports.logMyAttendance = async (req, res) => {
 
     // Get user's createdBy field for filtering
     const user = await User.findById(req.user._id);
-    
-    // Check for duplicate attendance within 1 minute (prevent double-logging)
-    const oneMinuteAgo = new Date(Date.now() - 60000);
-    const recentLog = await AttendanceLog.findOne({
-      userId: req.user._id,
-      timestamp: { $gte: oneMinuteAgo },
-    });
 
-    if (recentLog) {
-      return res.status(409).json({
-        success: false,
-        message: 'Attendance already logged within the last minute',
-        existingLog: recentLog,
-      });
-    }
+    // Note: Removed duplicate attendance check to allow multiple time in/time out per day
+    // Users can now log attendance multiple times throughout the day
 
     // Create attendance log
     const attendanceLog = await AttendanceLog.create({

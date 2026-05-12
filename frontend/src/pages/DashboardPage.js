@@ -17,7 +17,8 @@ const DashboardPage = () => {
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceError, setAttendanceError] = useState(null);
   const [attendanceRoleFilter, setAttendanceRoleFilter] = useState('all');
-  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+  const [attendanceStartDateFilter, setAttendanceStartDateFilter] = useState('');
+  const [attendanceEndDateFilter, setAttendanceEndDateFilter] = useState('');
   const [attendanceStudentFilter, setAttendanceStudentFilter] = useState('');
   const [attendanceCourseFilter, setAttendanceCourseFilter] = useState('');
   const [attendancePage, setAttendancePage] = useState(1);
@@ -113,8 +114,12 @@ const DashboardPage = () => {
         filters.role = attendanceRoleFilter;
       }
 
-      if (attendanceDateFilter) {
-        filters.date = attendanceDateFilter;
+      if (attendanceStartDateFilter) {
+        filters.startDate = attendanceStartDateFilter;
+      }
+
+      if (attendanceEndDateFilter) {
+        filters.endDate = attendanceEndDateFilter;
       }
 
       if (attendanceStudentFilter.trim()) {
@@ -142,13 +147,13 @@ const DashboardPage = () => {
     } finally {
       setAttendanceLoading(false);
     }
-  }, [attendanceRoleFilter, attendanceDateFilter, attendanceStudentFilter, attendanceCourseFilter]);
+  }, [attendanceRoleFilter, attendanceStartDateFilter, attendanceEndDateFilter, attendanceStudentFilter, attendanceCourseFilter]);
 
   useEffect(() => {
     if (activeTab === 'attendance' && currentUser) {
       loadAttendance(1);
     }
-  }, [activeTab, currentUser, attendanceRoleFilter, attendanceDateFilter, attendanceStudentFilter, attendanceCourseFilter, loadAttendance]);
+  }, [activeTab, currentUser, attendanceRoleFilter, attendanceStartDateFilter, attendanceEndDateFilter, attendanceStudentFilter, attendanceCourseFilter, loadAttendance]);
 
   // Handle logout
   const handleLogout = async () => {
@@ -352,9 +357,19 @@ const DashboardPage = () => {
               </select>
               <input
                 type="date"
-                value={attendanceDateFilter}
-                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+                value={attendanceStartDateFilter}
+                onChange={(e) => setAttendanceStartDateFilter(e.target.value)}
                 className="attendance-date-filter"
+                placeholder="Start Date"
+                title="Start Date"
+              />
+              <input
+                type="date"
+                value={attendanceEndDateFilter}
+                onChange={(e) => setAttendanceEndDateFilter(e.target.value)}
+                className="attendance-date-filter"
+                placeholder="End Date"
+                title="End Date"
               />
               <input
                 type="text"
