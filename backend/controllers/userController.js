@@ -85,10 +85,10 @@ exports.createUser = async (req, res) => {
     const { name, email, password, role, image, department, username, studentId, accountId } = req.body;
 
     // Validate required fields
-    if (!name || !email || !password || !role) {
+    if (!name || !role) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide name, email, password, and role',
+        message: 'Please provide name and role',
       });
     }
 
@@ -105,6 +105,16 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Invalid role. Must be one of: ${validRoles.join(', ')}`,
+      });
+    }
+
+    const roleRequiresCredentials = role === 'superadmin' || role === 'admin';
+    const normalizedPassword = typeof password === 'string' ? password.trim() : '';
+
+    if (roleRequiresCredentials && (!email || !normalizedPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and password for admin accounts',
       });
     }
 
@@ -144,7 +154,7 @@ exports.createUser = async (req, res) => {
       if (comparison.isMatch) {
         return res.status(409).json({
           success: false,
-          message: 'Face already registered',
+          message: 'Face is already used by another account',
           error: 'DUPLICATE_FACE',
           match: {
             existingUserId: existingFaceUser._id,
@@ -166,7 +176,7 @@ exports.createUser = async (req, res) => {
       if (comparison.isMatch) {
         return res.status(409).json({
           success: false,
-          message: 'Face already registered',
+          message: 'Face is already used by another account',
           error: 'DUPLICATE_FACE',
           match: {
             existingStudentId: existingFaceStudent.studentId,
@@ -204,15 +214,18 @@ exports.createUser = async (req, res) => {
       });
     }
 
-    // Duplicate email check
-    const normalizedEmail = String(email).toLowerCase().trim();
-    const existingEmailUser = await User.findOne({ email: normalizedEmail });
-    if (existingEmailUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email already registered',
-        error: 'DUPLICATE_EMAIL',
-      });
+    // Duplicate email check (email is required only for admin accounts)
+    let normalizedEmail;
+    if (typeof email === 'string' && email.trim()) {
+      normalizedEmail = email.toLowerCase().trim();
+      const existingEmailUser = await User.findOne({ email: normalizedEmail });
+      if (existingEmailUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already registered',
+          error: 'DUPLICATE_EMAIL',
+        });
+      }
     }
 
     // Duplicate username check (optional)
@@ -259,8 +272,8 @@ exports.createUser = async (req, res) => {
     // 6) Save user
     const user = await User.create({
       name,
-      email: normalizedEmail,
-      password,
+      ...(roleRequiresCredentials && normalizedEmail ? { email: normalizedEmail } : {}),
+      ...(roleRequiresCredentials && normalizedPassword ? { password: normalizedPassword } : {}),
       role,
       department: department || '',
       username: normalizedUsername,

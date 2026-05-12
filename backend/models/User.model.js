@@ -10,8 +10,11 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Please provide an email'],
+      required: function () {
+        return ['superadmin', 'admin'].includes(this.role);
+      },
       unique: true,
+      sparse: true,
       lowercase: true,
       trim: true,
     },
@@ -38,7 +41,9 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Please provide a password'],
+      required: function () {
+        return ['superadmin', 'admin'].includes(this.role);
+      },
       minlength: 6,
       select: false,
     },
@@ -88,7 +93,7 @@ userSchema.index({ accountId: 1 }, { unique: true, sparse: true });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
   
@@ -103,6 +108,9 @@ userSchema.pre('save', async function (next) {
 
 // Method to compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) {
+    return false;
+  }
   return await bcrypt.compare(candidatePassword, this.password);
 };
 

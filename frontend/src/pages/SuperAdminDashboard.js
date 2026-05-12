@@ -325,17 +325,18 @@ const SuperAdminDashboard = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const roleRequiresCredentials = formData.role === 'admin' || formData.role === 'superadmin';
     
     if (!formData.name.trim()) {
       setFormError('Name is required');
       return;
     }
-    if (!formData.email.trim()) {
-      setFormError('Email is required');
+    if (roleRequiresCredentials && !formData.email.trim()) {
+      setFormError('Email is required for admin accounts');
       return;
     }
-    if (modalMode === 'add' && !formData.password.trim()) {
-      setFormError('Password is required');
+    if (roleRequiresCredentials && modalMode === 'add' && !formData.password.trim()) {
+      setFormError('Password is required for admin accounts');
       return;
     }
     if (modalMode === 'add' && !capturedImage) {
@@ -349,12 +350,15 @@ const SuperAdminDashboard = () => {
     try {
       const userData = {
         name: formData.name.trim(),
-        email: formData.email.trim(),
         role: formData.role,
         department: formData.department || '',
       };
 
-      if (formData.password.trim()) {
+      if (roleRequiresCredentials && formData.email.trim()) {
+        userData.email = formData.email.trim();
+      }
+
+      if (roleRequiresCredentials && formData.password.trim()) {
         userData.password = formData.password;
       }
 
@@ -386,9 +390,11 @@ const SuperAdminDashboard = () => {
       const apiError = error.response?.data;
       const errorCode = apiError?.error;
       if (errorCode === 'DUPLICATE_FACE') {
-        setFormError('Face already registered. Please use a different person.');
+        setFormError('Face is already used by another account.');
       } else if (errorCode === 'DUPLICATE_EMAIL') {
         setFormError('Email already registered. Please use a different email.');
+      } else if (apiError?.message === 'Please provide email and password for admin accounts') {
+        setFormError('Email and password are required for admin accounts.');
       } else {
         setFormError(apiError?.message || 'Operation failed. Please try again.');
       }
@@ -1147,29 +1153,33 @@ const SuperAdminDashboard = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Enter email address"
-                  disabled={formLoading || modalMode === 'edit'}
-                />
-              </div>
+              {(modalMode === 'edit' || formData.role === 'admin' || formData.role === 'superadmin') && (
+                <>
+                  <div className="form-group">
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Enter email address"
+                      disabled={formLoading || modalMode === 'edit'}
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label>Password {modalMode === 'edit' && '(leave blank to keep current)'}</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter password"
-                  disabled={formLoading}
-                />
-              </div>
+                  <div className="form-group">
+                    <label>Password {modalMode === 'edit' && '(leave blank to keep current)'}</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Enter password"
+                      disabled={formLoading}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="form-group">
                 <label>Role</label>
