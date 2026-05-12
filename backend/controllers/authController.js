@@ -3,7 +3,11 @@ const Student = require('../models/Student.model');
 const LoginLog = require('../models/LoginLog.model');
 const AttendanceLog = require('../models/AttendanceLog.model');
 const jwt = require('jsonwebtoken');
-const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
+const {
+  extractFaceDescriptorFromBase64,
+  compareFaces,
+  getFaceDuplicateThreshold,
+} = require('../utils/faceDetection');
 const { processBase64Image } = require('../utils/imageProcessor');
 
 // @desc    Login user (superadmin/admin only)
@@ -179,7 +183,7 @@ exports.enrollFace = async (req, res) => {
     }
 
     // Enforce face uniqueness across all other user/student profiles
-    const duplicateFaceThreshold = parseFloat(process.env.FACE_DUPLICATE_THRESHOLD || '0.6');
+    const duplicateFaceThreshold = getFaceDuplicateThreshold();
 
     const otherUsers = await User.find({
       _id: { $ne: user._id },
@@ -672,4 +676,3 @@ exports.logout = async (req, res) => {
     });
   }
 };
-
