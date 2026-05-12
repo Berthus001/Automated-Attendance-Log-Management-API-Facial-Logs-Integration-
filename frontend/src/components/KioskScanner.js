@@ -9,8 +9,8 @@ const DETECTION_INTERVAL_MS = 500;
 const COOLDOWN_SECONDS = 5;
 // Face match threshold (strict: distance must be < 0.45)
 const MATCH_THRESHOLD = 0.45;
-// Force-reset blocked/error states quickly to prevent UI from getting stuck
-const ERROR_RESET_MS = 3000;
+// Auto-remove error messages after 5 seconds
+const ERROR_RESET_MS = 5000;
 // Guard API call so "Identifying..." cannot stay forever on network issues
 const API_TIMEOUT_MS = 8000;
 // CDN for face-api models
