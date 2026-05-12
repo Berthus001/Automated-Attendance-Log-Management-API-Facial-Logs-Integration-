@@ -2,12 +2,41 @@ const LoginLog = require('../models/LoginLog.model');
 const AttendanceLog = require('../models/AttendanceLog.model');
 const User = require('../models/User.model');
 
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseClientDateBoundary = (dateString, timezoneOffsetMinutes, endOfDay = false) => {
+  if (!DATE_ONLY_REGEX.test(dateString)) {
+    return null;
+  }
+
+  const [year, month, day] = dateString.split('-').map((value) => Number.parseInt(value, 10));
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  const hour = endOfDay ? 23 : 0;
+  const minute = endOfDay ? 59 : 0;
+  const second = endOfDay ? 59 : 0;
+  const millisecond = endOfDay ? 999 : 0;
+
+  // Convert client local day boundary to UTC using client timezone offset.
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second, millisecond)
+    + (timezoneOffsetMinutes * 60 * 1000);
+  const boundary = new Date(utcMs);
+
+  if (Number.isNaN(boundary.getTime())) {
+    return null;
+  }
+
+  return boundary;
+};
+
 // @desc    Get login logs with filtering
 // @route   GET /api/logs
 // @access  Private (Admin/SuperAdmin)
 exports.getLoginLogs = async (req, res) => {
   try {
-    const { role, startDate, endDate, page = 1, limit = 50 } = req.query;
+    const { role, startDate, endDate, timezoneOffset = '0', page = 1, limit = 50 } = req.query;
 
     // Build query
     let query = {};
@@ -36,29 +65,43 @@ exports.getLoginLogs = async (req, res) => {
 
     // Filter by date range if provided
     if (startDate || endDate) {
+      const parsedTimezoneOffset = Number.parseInt(String(timezoneOffset), 10);
+      if (!Number.isInteger(parsedTimezoneOffset) || parsedTimezoneOffset < -840 || parsedTimezoneOffset > 840) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid timezoneOffset. It must be an integer between -840 and 840 minutes.',
+        });
+      }
+
       query.loginTime = {};
       
       if (startDate) {
-        const start = new Date(startDate);
+        const start = DATE_ONLY_REGEX.test(startDate)
+          ? parseClientDateBoundary(startDate, parsedTimezoneOffset, false)
+          : new Date(startDate);
         if (isNaN(start.getTime())) {
           return res.status(400).json({
             success: false,
-            message: 'Invalid startDate format. Use ISO 8601 format (e.g., 2026-04-30)',
+            message: 'Invalid startDate format. Use YYYY-MM-DD or ISO 8601 format (e.g., 2026-04-30)',
           });
         }
         query.loginTime.$gte = start;
       }
       
       if (endDate) {
-        const end = new Date(endDate);
+        const end = DATE_ONLY_REGEX.test(endDate)
+          ? parseClientDateBoundary(endDate, parsedTimezoneOffset, true)
+          : new Date(endDate);
         if (isNaN(end.getTime())) {
           return res.status(400).json({
             success: false,
-            message: 'Invalid endDate format. Use ISO 8601 format (e.g., 2026-04-30)',
+            message: 'Invalid endDate format. Use YYYY-MM-DD or ISO 8601 format (e.g., 2026-04-30)',
           });
         }
-        // Set to end of day
-        end.setHours(23, 59, 59, 999);
+        if (!DATE_ONLY_REGEX.test(endDate)) {
+          // For full timestamps, preserve legacy behavior by including the rest of that day.
+          end.setHours(23, 59, 59, 999);
+        }
         query.loginTime.$lte = end;
       }
     }
@@ -195,6 +238,7 @@ exports.getActionLogs = async (req, res) => {
       actionType = 'all',
       startDate,
       endDate,
+      timezoneOffset = '0',
       page = 1,
       limit = 20,
     } = req.query;
@@ -213,6 +257,14 @@ exports.getActionLogs = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid limit value. Limit must be an integer between 1 and 100.',
+      });
+    }
+
+    const parsedTimezoneOffset = Number.parseInt(String(timezoneOffset), 10);
+    if (!Number.isInteger(parsedTimezoneOffset) || parsedTimezoneOffset < -840 || parsedTimezoneOffset > 840) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid timezoneOffset. It must be an integer between -840 and 840 minutes.',
       });
     }
 
@@ -243,24 +295,23 @@ exports.getActionLogs = async (req, res) => {
     let end = null;
 
     if (startDate) {
-      start = new Date(startDate);
-      if (Number.isNaN(start.getTime())) {
+      start = parseClientDateBoundary(startDate, parsedTimezoneOffset, false);
+      if (!start) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid startDate format. Use ISO 8601 format (e.g., 2026-04-30)',
+          message: 'Invalid startDate format. Use YYYY-MM-DD (e.g., 2026-04-30)',
         });
       }
     }
 
     if (endDate) {
-      end = new Date(endDate);
-      if (Number.isNaN(end.getTime())) {
+      end = parseClientDateBoundary(endDate, parsedTimezoneOffset, true);
+      if (!end) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid endDate format. Use ISO 8601 format (e.g., 2026-04-30)',
+          message: 'Invalid endDate format. Use YYYY-MM-DD (e.g., 2026-04-30)',
         });
       }
-      end.setHours(23, 59, 59, 999);
     }
 
     const loginMatch = {};

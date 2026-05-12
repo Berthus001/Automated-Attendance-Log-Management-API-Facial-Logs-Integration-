@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocat
 import HomePage from './pages/HomePage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import { logout } from './services/api';
 import './App.css';
 
 const ADMIN_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -68,12 +69,18 @@ const AdminIdleLogoutWatcher = () => {
 
     const getRemainingIdleMs = () => ADMIN_IDLE_TIMEOUT_MS - (Date.now() - getLastActivity());
 
-    const performIdleLogout = () => {
+    const performIdleLogout = async () => {
       clearTimers();
       setShowIdleWarning(false);
       if (!hasActiveAdminSession()) {
         localStorage.removeItem(ADMIN_LAST_ACTIVITY_KEY);
         return;
+      }
+
+      try {
+        await logout();
+      } catch (error) {
+        console.error('Idle logout request failed:', error);
       }
 
       clearAdminSession();

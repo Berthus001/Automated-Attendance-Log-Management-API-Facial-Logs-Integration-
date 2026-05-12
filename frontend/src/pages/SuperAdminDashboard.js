@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance, getActionLogs } from '../services/api';
+import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance, getActionLogs, logout } from '../services/api';
 import './SuperAdminDashboard.css';
 
 const SuperAdminDashboard = () => {
@@ -33,6 +33,27 @@ const SuperAdminDashboard = () => {
   const [actionPages, setActionPages] = useState(0);
   const [actionTotal, setActionTotal] = useState(0);
   const actionLimit = 20;
+
+  const formatActionTimestamp = (value) => {
+    if (!value) {
+      return 'N/A';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return 'N/A';
+    }
+
+    return parsed.toLocaleString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
+  };
 
   // Department options for React Select
   const departmentOptions = [
@@ -199,6 +220,7 @@ const SuperAdminDashboard = () => {
       if (actionDateFilter) {
         filters.startDate = actionDateFilter;
         filters.endDate = actionDateFilter;
+        filters.timezoneOffset = new Date().getTimezoneOffset();
       }
 
       const response = await getActionLogs(filters);
@@ -226,10 +248,18 @@ const SuperAdminDashboard = () => {
     }
   }, [activeTab, currentUser, actionRoleFilter, actionTypeFilter, actionDateFilter, loadActionLogsData]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      // Continue local logout even if backend request fails.
+      console.error('Logout request failed:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('pendingFace2FA');
+      navigate('/admin-login');
+    }
   };
 
   const openAddModal = (roleType = 'student') => {
@@ -810,7 +840,7 @@ const SuperAdminDashboard = () => {
                   {actionLogs.map((log, index) => (
                     <tr key={`${log.actionId || 'action'}-${log.actionType || 'type'}-${index}`}>
                       <td>
-                        {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                        {formatActionTimestamp(log.timestamp)}
                       </td>
                       <td>
                         <div className="action-user-cell">

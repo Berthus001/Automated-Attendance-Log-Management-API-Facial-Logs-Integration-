@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
-import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance } from '../services/api';
+import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance, logout } from '../services/api';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
@@ -141,10 +141,17 @@ const DashboardPage = () => {
   }, [activeTab, currentUser, attendanceRoleFilter, attendanceDateFilter, loadAttendance]);
 
   // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('pendingFace2FA');
+      navigate('/admin-login');
+    }
   };
 
   // Handle modal open
