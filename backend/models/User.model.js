@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema(
         return ['superadmin', 'admin'].includes(this.role);
       },
       unique: true,
-      // Sparse enforces unique email only when email is present, allowing multiple student/teacher records without email.
+      // Sparse enforces uniqueness when email is present while allowing multiple documents with undefined/null email.
       sparse: true,
       lowercase: true,
       trim: true,

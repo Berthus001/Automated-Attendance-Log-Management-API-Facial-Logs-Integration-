@@ -109,7 +109,7 @@ exports.createUser = async (req, res) => {
     }
 
     const roleRequiresCredentials = role === 'superadmin' || role === 'admin';
-    const normalizedPassword = typeof password === 'string' ? password.trim() : '';
+    const normalizedPassword = typeof password === 'string' ? password.trim() : undefined;
 
     if (roleRequiresCredentials && (!email || !normalizedPassword)) {
       return res.status(400).json({
