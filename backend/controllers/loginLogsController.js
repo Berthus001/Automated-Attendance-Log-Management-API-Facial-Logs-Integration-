@@ -1,5 +1,7 @@
+const mongoose = require('mongoose');
 const LoginLog = require('../models/LoginLog.model');
 const AttendanceLog = require('../models/AttendanceLog.model');
+const AdminActionLog = require('../models/AdminActionLog.model');
 const User = require('../models/User.model');
 
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -236,6 +238,7 @@ exports.getActionLogs = async (req, res) => {
     const {
       role,
       actionType = 'all',
+      userId,
       startDate,
       endDate,
       timezoneOffset = '0',
@@ -282,12 +285,26 @@ exports.getActionLogs = async (req, res) => {
       'logout',
       'attendance_time_in',
       'attendance_time_out',
+      'user_created',
+      'user_updated',
+      'user_deleted',
+      'admin_updated',
+      'admin_suspended',
+      'admin_activated',
+      'admin_deleted',
     ];
 
     if (!validActionTypes.includes(actionType)) {
       return res.status(400).json({
         success: false,
         message: `Invalid actionType. Must be one of: ${validActionTypes.join(', ')}`,
+      });
+    }
+
+    if (userId && !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid userId format.',
       });
     }
 
@@ -318,6 +335,9 @@ exports.getActionLogs = async (req, res) => {
     if (role) {
       loginMatch.role = role;
     }
+    if (userId) {
+      loginMatch.userId = new mongoose.Types.ObjectId(userId);
+    }
     if (start || end) {
       loginMatch.loginTime = {};
       if (start) {
@@ -331,6 +351,9 @@ exports.getActionLogs = async (req, res) => {
     const logoutMatch = {};
     if (role) {
       logoutMatch.role = role;
+    }
+    if (userId) {
+      logoutMatch.userId = new mongoose.Types.ObjectId(userId);
     }
     logoutMatch.logoutTime = { $ne: null };
     if (start || end) {
@@ -351,6 +374,9 @@ exports.getActionLogs = async (req, res) => {
       userRole: attendanceRoleFilter,
       timeIn: { $ne: null },
     };
+    if (userId) {
+      attendanceInMatch.userId = new mongoose.Types.ObjectId(userId);
+    }
 
     if (start || end) {
       attendanceInMatch.timeIn = {
@@ -368,6 +394,9 @@ exports.getActionLogs = async (req, res) => {
       userRole: attendanceRoleFilter,
       timeOut: { $ne: null },
     };
+    if (userId) {
+      attendanceOutMatch.userId = new mongoose.Types.ObjectId(userId);
+    }
 
     if (start || end) {
       attendanceOutMatch.timeOut = {
@@ -497,6 +526,55 @@ exports.getActionLogs = async (req, res) => {
       },
     ];
 
+    const adminActionMatch = {};
+    if (role) {
+      adminActionMatch.actorRole = role;
+    }
+    if (userId) {
+      adminActionMatch.actorId = new mongoose.Types.ObjectId(userId);
+    }
+    if (start || end) {
+      adminActionMatch.timestamp = {};
+      if (start) {
+        adminActionMatch.timestamp.$gte = start;
+      }
+      if (end) {
+        adminActionMatch.timestamp.$lte = end;
+      }
+    }
+    if (actionType !== 'all') {
+      adminActionMatch.actionType = actionType;
+    }
+
+    const adminActionPipeline = [
+      { $match: adminActionMatch },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'actorId',
+          foreignField: '_id',
+          as: 'actor',
+        },
+      },
+      { $unwind: { path: '$actor', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 0,
+          actionId: '$_id',
+          userId: '$actorId',
+          userName: { $ifNull: ['$actor.name', '$actorName'] },
+          userEmail: { $ifNull: ['$actor.email', '$actorEmail'] },
+          role: '$actorRole',
+          actionType: '$actionType',
+          description: '$description',
+          timestamp: '$timestamp',
+          source: { $ifNull: ['$source', 'user_management'] },
+          ipAddress: '$ipAddress',
+          userAgent: '$userAgent',
+        },
+      },
+    ];
+
     const actionPipelines = [];
     if (actionType === 'all' || actionType === 'login') {
       actionPipelines.push({ coll: LoginLog.collection.name, pipeline: loginPipeline });
@@ -509,6 +587,18 @@ exports.getActionLogs = async (req, res) => {
     }
     if (actionType === 'all' || actionType === 'attendance_time_out') {
       actionPipelines.push({ coll: AttendanceLog.collection.name, pipeline: attendanceOutPipeline });
+    }
+    if (
+      actionType === 'all' ||
+      actionType === 'user_created' ||
+      actionType === 'user_updated' ||
+      actionType === 'user_deleted' ||
+      actionType === 'admin_updated' ||
+      actionType === 'admin_suspended' ||
+      actionType === 'admin_activated' ||
+      actionType === 'admin_deleted'
+    ) {
+      actionPipelines.push({ coll: AdminActionLog.collection.name, pipeline: adminActionPipeline });
     }
 
     if (actionPipelines.length === 0) {

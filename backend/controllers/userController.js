@@ -1,5 +1,6 @@
 const User = require('../models/User.model');
 const Student = require('../models/Student.model');
+const AdminActionLog = require('../models/AdminActionLog.model');
 const { loadModels, extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
 
 // Load face recognition models on startup
@@ -273,6 +274,28 @@ exports.createUser = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
 
+    try {
+      await AdminActionLog.create({
+        actorId: req.user._id,
+        actorName: req.user.name,
+        actorEmail: req.user.email,
+        actorRole: req.user.role,
+        actionType: 'user_created',
+        source: 'user_management',
+        description: `${req.user.name} created a new ${user.role} account (${user.name})`,
+        targetUserId: user._id,
+        targetUserName: user.name,
+        targetUserEmail: user.email,
+        targetUserRole: user.role,
+        timestamp: new Date(),
+        ipAddress: req.ip || req.connection?.remoteAddress || null,
+        userAgent: req.get('user-agent') || null,
+      });
+    } catch (actionLogError) {
+      console.error('Failed to create admin action log:', actionLogError.message);
+      // Do not fail user creation if audit logging fails.
+    }
+
     res.status(201).json({
       success: true,
       message: 'User created successfully',
@@ -322,6 +345,27 @@ exports.updateUser = async (req, res) => {
 
       // Strip unchanged role from payload
       delete req.body.role;
+    }
+
+    // Only superadmin can suspend/reactivate admin accounts.
+    if (typeof req.body.isActive !== 'undefined' && userToUpdate.role === 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superadmin can change admin account status.',
+      });
+    }
+
+    // Prevent superadmin from suspending their own account.
+    if (
+      typeof req.body.isActive !== 'undefined' &&
+      userToUpdate.role === 'superadmin' &&
+      userToUpdate._id.toString() === req.user._id.toString() &&
+      req.body.isActive === false
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot suspend your own superadmin account.',
+      });
     }
 
     // Normalize and validate uniqueness for mutable identity fields
@@ -412,6 +456,50 @@ exports.updateUser = async (req, res) => {
       new: true,
       runValidators: true,
     }).select('-password');
+
+    try {
+      let actionType = 'user_updated';
+      let description = `${req.user.name} updated ${user.role} account (${user.name})`;
+
+      if (user.role === 'admin') {
+        const adminStatusChanged =
+          typeof req.body.isActive !== 'undefined' &&
+          userToUpdate.isActive !== user.isActive;
+
+        if (adminStatusChanged) {
+          if (user.isActive) {
+            actionType = 'admin_activated';
+            description = `${req.user.name} activated admin account (${user.name})`;
+          } else {
+            actionType = 'admin_suspended';
+            description = `${req.user.name} suspended admin account (${user.name})`;
+          }
+        } else {
+          actionType = 'admin_updated';
+          description = `${req.user.name} edited admin account (${user.name})`;
+        }
+      }
+
+      await AdminActionLog.create({
+        actorId: req.user._id,
+        actorName: req.user.name,
+        actorEmail: req.user.email,
+        actorRole: req.user.role,
+        actionType,
+        source: 'user_management',
+        description,
+        targetUserId: user._id,
+        targetUserName: user.name,
+        targetUserEmail: user.email,
+        targetUserRole: user.role,
+        timestamp: new Date(),
+        ipAddress: req.ip || req.connection?.remoteAddress || null,
+        userAgent: req.get('user-agent') || null,
+      });
+    } catch (actionLogError) {
+      console.error('Failed to create admin action log:', actionLogError.message);
+      // Do not fail user update if audit logging fails.
+    }
     
     res.status(200).json({
       success: true,
@@ -461,6 +549,33 @@ exports.deleteUser = async (req, res) => {
     
     // Delete user
     await User.findByIdAndDelete(req.params.id);
+
+    try {
+      const actionType = userToDelete.role === 'admin' ? 'admin_deleted' : 'user_deleted';
+      const description = userToDelete.role === 'admin'
+        ? `${req.user.name} deleted admin account (${userToDelete.name})`
+        : `${req.user.name} deleted ${userToDelete.role} account (${userToDelete.name})`;
+
+      await AdminActionLog.create({
+        actorId: req.user._id,
+        actorName: req.user.name,
+        actorEmail: req.user.email,
+        actorRole: req.user.role,
+        actionType,
+        source: 'user_management',
+        description,
+        targetUserId: userToDelete._id,
+        targetUserName: userToDelete.name,
+        targetUserEmail: userToDelete.email,
+        targetUserRole: userToDelete.role,
+        timestamp: new Date(),
+        ipAddress: req.ip || req.connection?.remoteAddress || null,
+        userAgent: req.get('user-agent') || null,
+      });
+    } catch (actionLogError) {
+      console.error('Failed to create admin action log:', actionLogError.message);
+      // Do not fail user delete if audit logging fails.
+    }
     
     res.status(200).json({
       success: true,

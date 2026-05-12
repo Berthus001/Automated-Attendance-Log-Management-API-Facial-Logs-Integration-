@@ -28,6 +28,7 @@ const SuperAdminDashboard = () => {
   const [actionLogsError, setActionLogsError] = useState(null);
   const [actionRoleFilter, setActionRoleFilter] = useState('all');
   const [actionTypeFilter, setActionTypeFilter] = useState('all');
+  const [actionScopeFilter, setActionScopeFilter] = useState('all');
   const [actionDateFilter, setActionDateFilter] = useState('');
   const [actionPage, setActionPage] = useState(1);
   const [actionPages, setActionPages] = useState(0);
@@ -217,6 +218,10 @@ const SuperAdminDashboard = () => {
         filters.actionType = actionTypeFilter;
       }
 
+      if (actionScopeFilter === 'mine' && currentUser?.id) {
+        filters.userId = currentUser.id;
+      }
+
       if (actionDateFilter) {
         filters.startDate = actionDateFilter;
         filters.endDate = actionDateFilter;
@@ -240,13 +245,13 @@ const SuperAdminDashboard = () => {
     } finally {
       setActionLogsLoading(false);
     }
-  }, [actionRoleFilter, actionTypeFilter, actionDateFilter]);
+  }, [actionRoleFilter, actionTypeFilter, actionDateFilter, actionScopeFilter, currentUser]);
 
   useEffect(() => {
     if (activeTab === 'actionLogs' && currentUser?.role === 'superadmin') {
       loadActionLogsData(1);
     }
-  }, [activeTab, currentUser, actionRoleFilter, actionTypeFilter, actionDateFilter, loadActionLogsData]);
+  }, [activeTab, currentUser, actionRoleFilter, actionTypeFilter, actionDateFilter, actionScopeFilter, loadActionLogsData]);
 
   const handleLogout = async () => {
     try {
@@ -398,6 +403,25 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleToggleAdminStatus = async (user) => {
+    const nextStatus = !user.isActive;
+    const actionLabel = nextStatus ? 'activate' : 'suspend';
+
+    if (!window.confirm(`Are you sure you want to ${actionLabel} admin "${user.name}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await updateUser(user._id, { isActive: nextStatus });
+      if (response.success) {
+        await loadUsers();
+      }
+    } catch (error) {
+      console.error('Toggle admin status error:', error);
+      alert(error.response?.data?.message || `Failed to ${actionLabel} admin account`);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     if (currentUser && currentUser.role === 'admin') {
       if (user.role !== 'student' && user.role !== 'teacher') {
@@ -525,10 +549,15 @@ const SuperAdminDashboard = () => {
     </div>
   );
 
-  const renderUsersTab = () => (
+  const renderUsersTab = (adminsOnly = false) => {
+    const displayUsers = adminsOnly
+      ? filteredUsers.filter((user) => user.role === 'admin')
+      : filteredUsers;
+
+    return (
     <div className="users-content">
       <div className="users-header">
-        <h2 className="section-title">👥 All Users</h2>
+        <h2 className="section-title">{adminsOnly ? '🛡️ Administrators' : '👥 All Users'}</h2>
         <div className="users-controls">
           <input
             type="text"
@@ -537,21 +566,23 @@ const SuperAdminDashboard = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="role-filter"
-          >
-            <option value="all">All Roles</option>
-            {currentUser?.role === 'superadmin' && (
-              <>
-                <option value="superadmin">Superadmin</option>
-                <option value="admin">Admin</option>
-              </>
-            )}
-            <option value="teacher">Teacher</option>
-            <option value="student">Student</option>
-          </select>
+          {!adminsOnly && (
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="role-filter"
+            >
+              <option value="all">All Roles</option>
+              {currentUser?.role === 'superadmin' && (
+                <>
+                  <option value="superadmin">Superadmin</option>
+                  <option value="admin">Admin</option>
+                </>
+              )}
+              <option value="teacher">Teacher</option>
+              <option value="student">Student</option>
+            </select>
+          )}
         </div>
       </div>
 
@@ -560,11 +591,11 @@ const SuperAdminDashboard = () => {
           <div className="spinner"></div>
           <p>Loading users...</p>
         </div>
-      ) : filteredUsers.length === 0 ? (
+      ) : displayUsers.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📭</div>
           <h3>No users found</h3>
-          <p>Try adjusting your filters or add a new user</p>
+          <p>Try adjusting your filters.</p>
         </div>
       ) : (
         <div className="users-table-container">
@@ -577,11 +608,11 @@ const SuperAdminDashboard = () => {
                 <th>Status</th>
                 <th>Face Enrolled</th>
                 <th>Created</th>
-                <th>Actions</th>
+                {adminsOnly && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map(user => (
+              {displayUsers.map(user => (
                 <tr key={user._id}>
                   <td className="user-name-cell">
                     <div className="user-avatar-small">
@@ -608,24 +639,33 @@ const SuperAdminDashboard = () => {
                   <td className="date-cell">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="actions-cell">
-                    <button
-                      onClick={() => openEditModal(user)}
-                      className="btn-action btn-edit"
-                      title="Edit user"
-                    >
-                      ✏️
-                    </button>
-                    {user._id !== currentUser?._id && (
+                  {adminsOnly && (
+                    <td className="actions-cell">
                       <button
-                        onClick={() => handleDeleteUser(user._id, user.name)}
-                        className="btn-action btn-delete"
-                        title="Delete user"
+                        onClick={() => openEditModal(user)}
+                        className="btn-action btn-edit"
+                        title="Edit user"
                       >
-                        🗑️
+                        ✏️
                       </button>
-                    )}
-                  </td>
+                      <button
+                        onClick={() => handleToggleAdminStatus(user)}
+                        className={`btn-action ${user.isActive ? 'btn-suspend' : 'btn-activate'}`}
+                        title={user.isActive ? 'Suspend admin account' : 'Activate admin account'}
+                      >
+                        {user.isActive ? '⏸️' : '✅'}
+                      </button>
+                      {user._id !== currentUser?._id && (
+                        <button
+                          onClick={() => handleDeleteUser(user._id, user.name)}
+                          className="btn-action btn-delete"
+                          title="Delete user"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -633,7 +673,8 @@ const SuperAdminDashboard = () => {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const renderAttendanceTab = () => {
     const startRecord = attendanceTotal === 0 ? 0 : (attendancePage - 1) * attendanceLimit + 1;
@@ -787,6 +828,21 @@ const SuperAdminDashboard = () => {
               <option value="logout">Logout</option>
               <option value="attendance_time_in">Attendance Time In</option>
               <option value="attendance_time_out">Attendance Time Out</option>
+              <option value="user_created">User Created</option>
+              <option value="user_updated">User Updated</option>
+              <option value="user_deleted">User Deleted</option>
+              <option value="admin_updated">Admin Edited</option>
+              <option value="admin_suspended">Admin Suspended</option>
+              <option value="admin_activated">Admin Activated</option>
+              <option value="admin_deleted">Admin Deleted</option>
+            </select>
+            <select
+              value={actionScopeFilter}
+              onChange={(e) => setActionScopeFilter(e.target.value)}
+              className="role-filter"
+            >
+              <option value="all">All Activities</option>
+              <option value="mine">My Activities</option>
             </select>
             <input
               type="date"
@@ -936,7 +992,10 @@ const SuperAdminDashboard = () => {
           </button>
           <button
             className={`nav-tab ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
+            onClick={() => {
+              setActiveTab('users');
+              setSelectedRole('all');
+            }}
           >
             👥 All Users
           </button>
@@ -958,7 +1017,7 @@ const SuperAdminDashboard = () => {
             <button
               className={`nav-tab ${activeTab === 'admins' ? 'active' : ''}`}
               onClick={() => {
-                setActiveTab('users');
+                setActiveTab('admins');
                 setSelectedRole('admin');
               }}
             >
@@ -971,7 +1030,8 @@ const SuperAdminDashboard = () => {
       {/* Main Content */}
       <div className="dashboard-content">
         {activeTab === 'overview' && renderOverviewTab()}
-        {activeTab === 'users' && renderUsersTab()}
+        {activeTab === 'users' && renderUsersTab(false)}
+        {activeTab === 'admins' && currentUser?.role === 'superadmin' && renderUsersTab(true)}
         {activeTab === 'attendance' && renderAttendanceTab()}
         {activeTab === 'actionLogs' && currentUser?.role === 'superadmin' && renderActionLogsTab()}
       </div>

@@ -423,6 +423,41 @@
   color: #92400e;
 }
 
+.action-user_created {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.action-user_updated {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.action-user_deleted {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.action-admin_updated {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.action-admin_suspended {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.action-admin_activated {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.action-admin_deleted {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .action-unknown {
   background: #f3f4f6;
   color: #374151;
@@ -641,6 +676,14 @@
 
 .btn-delete:hover {
   background: #fee2e2;
+}
+
+.btn-suspend:hover {
+  background: #fef3c7;
+}
+
+.btn-activate:hover {
+  background: #d1fae5;
 }
 
 /* Modal */
