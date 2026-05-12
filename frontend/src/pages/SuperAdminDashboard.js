@@ -18,7 +18,8 @@ const SuperAdminDashboard = () => {
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceError, setAttendanceError] = useState(null);
   const [attendanceRoleFilter, setAttendanceRoleFilter] = useState('all');
-  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+  const [attendanceStartDateFilter, setAttendanceStartDateFilter] = useState('');
+  const [attendanceEndDateFilter, setAttendanceEndDateFilter] = useState('');
   const [attendanceStudentFilter, setAttendanceStudentFilter] = useState('');
   const [attendanceCourseFilter, setAttendanceCourseFilter] = useState('');
   const [attendancePage, setAttendancePage] = useState(1);
@@ -31,11 +32,15 @@ const SuperAdminDashboard = () => {
   const [actionRoleFilter, setActionRoleFilter] = useState('all');
   const [actionTypeFilter, setActionTypeFilter] = useState('all');
   const [actionScopeFilter, setActionScopeFilter] = useState('all');
-  const [actionDateFilter, setActionDateFilter] = useState('');
+  const [actionStartDateFilter, setActionStartDateFilter] = useState('');
+  const [actionEndDateFilter, setActionEndDateFilter] = useState('');
   const [actionPage, setActionPage] = useState(1);
   const [actionPages, setActionPages] = useState(0);
   const [actionTotal, setActionTotal] = useState(0);
   const actionLimit = 20;
+
+  // Philippines timezone offset in minutes (UTC+8 = -480 minutes)
+  const PH_TIMEZONE_OFFSET = -480;
 
   const formatActionTimestamp = (value) => {
     if (!value) {
@@ -47,7 +52,8 @@ const SuperAdminDashboard = () => {
       return 'N/A';
     }
 
-    return parsed.toLocaleString('en-GB', {
+    // Convert to Philippines timezone
+    return parsed.toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -55,6 +61,7 @@ const SuperAdminDashboard = () => {
       minute: '2-digit',
       second: '2-digit',
       hour12: true,
+      timeZone: 'Asia/Manila',
     });
   };
 
@@ -173,8 +180,12 @@ const SuperAdminDashboard = () => {
         filters.role = attendanceRoleFilter;
       }
 
-      if (attendanceDateFilter) {
-        filters.date = attendanceDateFilter;
+      if (attendanceStartDateFilter) {
+        filters.startDate = attendanceStartDateFilter;
+      }
+
+      if (attendanceEndDateFilter) {
+        filters.endDate = attendanceEndDateFilter;
       }
 
       if (attendanceStudentFilter.trim()) {
@@ -202,13 +213,13 @@ const SuperAdminDashboard = () => {
     } finally {
       setAttendanceLoading(false);
     }
-  }, [attendanceRoleFilter, attendanceDateFilter, attendanceStudentFilter, attendanceCourseFilter]);
+  }, [attendanceRoleFilter, attendanceStartDateFilter, attendanceEndDateFilter, attendanceStudentFilter, attendanceCourseFilter]);
 
   useEffect(() => {
     if (activeTab === 'attendance' && currentUser) {
       loadAttendance(1);
     }
-  }, [activeTab, currentUser, attendanceRoleFilter, attendanceDateFilter, attendanceStudentFilter, attendanceCourseFilter, loadAttendance]);
+  }, [activeTab, currentUser, attendanceRoleFilter, attendanceStartDateFilter, attendanceEndDateFilter, attendanceStudentFilter, attendanceCourseFilter, loadAttendance]);
 
   const loadActionLogsData = useCallback(async (page = 1) => {
     try {
@@ -218,6 +229,7 @@ const SuperAdminDashboard = () => {
       const filters = {
         page,
         limit: actionLimit,
+        timezoneOffset: PH_TIMEZONE_OFFSET, // Use Philippines timezone
       };
 
       if (actionRoleFilter !== 'all') {
@@ -232,10 +244,12 @@ const SuperAdminDashboard = () => {
         filters.userId = currentUser.id;
       }
 
-      if (actionDateFilter) {
-        filters.startDate = actionDateFilter;
-        filters.endDate = actionDateFilter;
-        filters.timezoneOffset = new Date().getTimezoneOffset();
+      if (actionStartDateFilter) {
+        filters.startDate = actionStartDateFilter;
+      }
+
+      if (actionEndDateFilter) {
+        filters.endDate = actionEndDateFilter;
       }
 
       const response = await getActionLogs(filters);
@@ -255,13 +269,13 @@ const SuperAdminDashboard = () => {
     } finally {
       setActionLogsLoading(false);
     }
-  }, [actionRoleFilter, actionTypeFilter, actionDateFilter, actionScopeFilter, currentUser]);
+  }, [actionRoleFilter, actionTypeFilter, actionStartDateFilter, actionEndDateFilter, actionScopeFilter, currentUser]);
 
   useEffect(() => {
     if (activeTab === 'actionLogs' && currentUser?.role === 'superadmin') {
       loadActionLogsData(1);
     }
-  }, [activeTab, currentUser, actionRoleFilter, actionTypeFilter, actionDateFilter, actionScopeFilter, loadActionLogsData]);
+  }, [activeTab, currentUser, actionRoleFilter, actionTypeFilter, actionStartDateFilter, actionEndDateFilter, actionScopeFilter, loadActionLogsData]);
 
   const handleLogout = async () => {
     try {
@@ -689,7 +703,7 @@ const SuperAdminDashboard = () => {
                     </span>
                   </td>
                   <td className="date-cell">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {new Date(user.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Manila' })}
                   </td>
                   <td className="date-cell">
                     {user.createdBy?.name ? (
@@ -770,9 +784,19 @@ const SuperAdminDashboard = () => {
             </select>
             <input
               type="date"
-              value={attendanceDateFilter}
-              onChange={(e) => setAttendanceDateFilter(e.target.value)}
+              value={attendanceStartDateFilter}
+              onChange={(e) => setAttendanceStartDateFilter(e.target.value)}
               className="attendance-date-filter"
+              placeholder="Start Date"
+              title="Start Date"
+            />
+            <input
+              type="date"
+              value={attendanceEndDateFilter}
+              onChange={(e) => setAttendanceEndDateFilter(e.target.value)}
+              className="attendance-date-filter"
+              placeholder="End Date"
+              title="End Date"
             />
             <input
               type="text"
@@ -934,9 +958,19 @@ const SuperAdminDashboard = () => {
             </select>
             <input
               type="date"
-              value={actionDateFilter}
-              onChange={(e) => setActionDateFilter(e.target.value)}
+              value={actionStartDateFilter}
+              onChange={(e) => setActionStartDateFilter(e.target.value)}
               className="attendance-date-filter"
+              placeholder="Start Date"
+              title="Start Date"
+            />
+            <input
+              type="date"
+              value={actionEndDateFilter}
+              onChange={(e) => setActionEndDateFilter(e.target.value)}
+              className="attendance-date-filter"
+              placeholder="End Date"
+              title="End Date"
             />
             <button
               type="button"

@@ -10,7 +10,7 @@ const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  */
 exports.getAttendance = async (req, res) => {
   try {
-    const { role, date, student, course, page = '1', limit = '20' } = req.query;
+    const { role, date, startDate, endDate, student, course, page = '1', limit = '20' } = req.query;
 
     const parsedPage = Number.parseInt(page, 10);
     const parsedLimit = Number.parseInt(limit, 10);
@@ -50,6 +50,7 @@ exports.getAttendance = async (req, res) => {
       query.userRole = { $in: ['student', 'teacher'] };
     }
 
+    // Handle date filtering - support both single date and date range
     if (date) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return res.status(400).json({
@@ -74,6 +75,49 @@ exports.getAttendance = async (req, res) => {
         $gte: startOfDay,
         $lte: endOfDay,
       };
+    } else if (startDate || endDate) {
+      // Date range filtering
+      query.timestamp = {};
+
+      if (startDate) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid startDate format. Use YYYY-MM-DD.',
+          });
+        }
+
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid startDate value. Use a valid calendar date in YYYY-MM-DD format.',
+          });
+        }
+
+        start.setHours(0, 0, 0, 0);
+        query.timestamp.$gte = start;
+      }
+
+      if (endDate) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid endDate format. Use YYYY-MM-DD.',
+          });
+        }
+
+        const end = new Date(endDate);
+        if (Number.isNaN(end.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid endDate value. Use a valid calendar date in YYYY-MM-DD format.',
+          });
+        }
+
+        end.setHours(23, 59, 59, 999);
+        query.timestamp.$lte = end;
+      }
     }
 
     if (student && typeof student === 'string' && student.trim()) {
@@ -111,22 +155,26 @@ exports.getAttendance = async (req, res) => {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
+          timeZone: 'Asia/Manila',
         }),
         time: timeIn.toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit',
           hour12: true,
+          timeZone: 'Asia/Manila',
         }),
         timeInFormatted: timeIn.toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit',
           hour12: true,
+          timeZone: 'Asia/Manila',
         }),
         timeOutFormatted: timeOut
           ? timeOut.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
               hour12: true,
+              timeZone: 'Asia/Manila',
             })
           : null,
       };
