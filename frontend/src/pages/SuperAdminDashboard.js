@@ -5,6 +5,9 @@ import WebcamWithFaceDetection from '../components/WebcamWithFaceDetection';
 import { getAllUsers, createUser, updateUser, deleteUser, getCurrentUser, getAttendance, getActionLogs, logout } from '../services/api';
 import './SuperAdminDashboard.css';
 
+// Philippines timezone offset in minutes (UTC+8 = -480 minutes)
+const PH_TIMEZONE_OFFSET = -480;
+
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
@@ -38,9 +41,6 @@ const SuperAdminDashboard = () => {
   const [actionPages, setActionPages] = useState(0);
   const [actionTotal, setActionTotal] = useState(0);
   const actionLimit = 20;
-
-  // Philippines timezone offset in minutes (UTC+8 = -480 minutes)
-  const PH_TIMEZONE_OFFSET = -480;
 
   const formatActionTimestamp = (value) => {
     if (!value) {
