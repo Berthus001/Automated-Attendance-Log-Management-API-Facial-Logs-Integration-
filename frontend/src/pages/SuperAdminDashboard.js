@@ -527,6 +527,21 @@ const SuperAdminDashboard = () => {
               <p>Create administrator account with full access</p>
             </div>
           )}
+
+          {currentUser?.role === 'admin' && (
+            <>
+              <div className="action-card" onClick={() => openAddModal('student')}>
+                <div className="action-icon action-view">🎓</div>
+                <h3>Add New Student</h3>
+                <p>Create student account</p>
+              </div>
+              <div className="action-card" onClick={() => openAddModal('teacher')}>
+                <div className="action-icon action-view">👨‍🏫</div>
+                <h3>Add New Teacher</h3>
+                <p>Create teacher account</p>
+              </div>
+            </>
+          )}
           
           <div className="action-card" onClick={() => setActiveTab('users')}>
             <div className="action-icon action-view">📋</div>
@@ -563,12 +578,31 @@ const SuperAdminDashboard = () => {
     const displayUsers = adminsOnly
       ? filteredUsers.filter((user) => user.role === 'admin')
       : filteredUsers;
+    const showActionsColumn = adminsOnly || currentUser?.role === 'admin';
 
     return (
     <div className="users-content">
       <div className="users-header">
         <h2 className="section-title">{adminsOnly ? '🛡️ Administrators' : '👥 All Users'}</h2>
         <div className="users-controls">
+          {!adminsOnly && currentUser?.role === 'admin' && (
+            <>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => openAddModal('student')}
+              >
+                ➕ Add Student
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => openAddModal('teacher')}
+              >
+                ➕ Add Teacher
+              </button>
+            </>
+          )}
           <input
             type="text"
             placeholder="🔍 Search users..."
@@ -619,7 +653,7 @@ const SuperAdminDashboard = () => {
                 <th>Face Enrolled</th>
                 <th>Created</th>
                 <th>Created By</th>
-                {adminsOnly && <th>Actions</th>}
+                {showActionsColumn && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -660,29 +694,41 @@ const SuperAdminDashboard = () => {
                       'System'
                     )}
                   </td>
-                  {adminsOnly && (
+                  {showActionsColumn && (
                     <td className="actions-cell">
-                      <button
-                        onClick={() => openEditModal(user)}
-                        className="btn-action btn-edit"
-                        title="Edit user"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleToggleAdminStatus(user)}
-                        className={`btn-action ${user.isActive ? 'btn-suspend' : 'btn-activate'}`}
-                        title={user.isActive ? 'Suspend admin account' : 'Activate admin account'}
-                      >
-                        {user.isActive ? '⏸️' : '✅'}
-                      </button>
-                      {user._id !== currentUser?._id && (
+                      {adminsOnly ? (
+                        <>
+                          <button
+                            onClick={() => openEditModal(user)}
+                            className="btn-action btn-edit"
+                            title="Edit user"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleToggleAdminStatus(user)}
+                            className={`btn-action ${user.isActive ? 'btn-suspend' : 'btn-activate'}`}
+                            title={user.isActive ? 'Suspend admin account' : 'Activate admin account'}
+                          >
+                            {user.isActive ? '⏸️' : '✅'}
+                          </button>
+                          {user._id !== currentUser?._id && (
+                            <button
+                              onClick={() => handleDeleteUser(user._id, user.name)}
+                              className="btn-action btn-delete"
+                              title="Delete user"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </>
+                      ) : (
                         <button
-                          onClick={() => handleDeleteUser(user._id, user.name)}
-                          className="btn-action btn-delete"
-                          title="Delete user"
+                          onClick={() => openEditModal(user)}
+                          className="btn-action btn-edit"
+                          title={`Edit ${user.role}`}
                         >
-                          🗑️
+                          ✏️
                         </button>
                       )}
                     </td>

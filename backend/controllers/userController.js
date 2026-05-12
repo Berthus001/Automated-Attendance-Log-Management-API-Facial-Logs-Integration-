@@ -79,7 +79,7 @@ exports.getUser = async (req, res) => {
 
 // @desc    Create user with face descriptor
 // @route   POST /api/users
-// @access  Private (SuperAdmin can create admin/teacher/student, Admin can create teacher/student)
+// @access  Private (SuperAdmin can create admin only, Admin can create teacher/student)
 exports.createUser = async (req, res) => {
   try {
     const { name, email, password, role, image, department, username, studentId, accountId } = req.body;
@@ -189,11 +189,11 @@ exports.createUser = async (req, res) => {
         });
       }
     } else if (requesterRole === 'superadmin') {
-      // Superadmin can create admin, teacher, student
-      if (role === 'superadmin') {
+      // Superadmin can only create admin
+      if (role !== 'admin') {
         return res.status(403).json({
           success: false,
-          message: 'Cannot create another superadmin account',
+          message: 'Superadmin users can only create admin accounts',
         });
       }
     } else {
