@@ -431,7 +431,7 @@ exports.faceLogin = async (req, res) => {
     // Find best match by comparing with all users
     let bestMatch = null;
     let lowestDistance = Infinity;
-    const matchThreshold = 0.6;
+    const matchThreshold = 0.55;
     const strongMatchThreshold = 0.4;
 
     for (const user of users) {
@@ -473,11 +473,50 @@ exports.faceLogin = async (req, res) => {
       });
     }
 
-    // Update login state for face login users
+    // Check for force login parameter
+    const forceLogin = req.body.forceLogin === true;
+
+    // Check if user is already logged in
+    const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours (1 day) in milliseconds
     const now = new Date();
+    
+    if (matchedUser.isLoggedIn && !forceLogin) {
+      // Check if last login was more than 24 hours ago (stale session)
+      if (matchedUser.lastLoginAt && (now - new Date(matchedUser.lastLoginAt)) > SESSION_TIMEOUT) {
+        // Session is stale, allow re-login
+        matchedUser.isLoggedIn = false;
+      } else {
+        // Active session exists
+        return res.status(409).json({
+          success: false,
+          message: 'User already logged in from another session',
+        });
+      }
+    }
+
+    // If forceLogin is true, clear previous session
+    if (forceLogin && matchedUser.isLoggedIn) {
+      matchedUser.isLoggedIn = false;
+    }
+
+    // Update login state
     matchedUser.isLoggedIn = true;
     matchedUser.lastLoginAt = now;
     await matchedUser.save();
+
+    // Check if attendance already logged today
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingAttendance = await AttendanceLog.findOne({
+      userId: matchedUser._id,
+      timestamp: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+    });
 
     // Log the login
     try {

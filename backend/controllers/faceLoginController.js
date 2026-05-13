@@ -47,7 +47,7 @@ exports.faceLogin = async (req, res) => {
     // Find best match with optimization
     let bestMatch = null;
     let lowestDistance = Infinity;
-    const matchThreshold = 0.6;
+    const matchThreshold = 0.55;
     const strongMatchThreshold = 0.4; // Stop early if very strong match
 
     for (const student of students) {

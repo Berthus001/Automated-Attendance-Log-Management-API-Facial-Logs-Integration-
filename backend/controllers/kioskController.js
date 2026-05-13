@@ -4,7 +4,7 @@ const { processBase64Image } = require('../utils/imageProcessor');
 const { extractFaceDescriptorFromBase64, compareFaces } = require('../utils/faceDetection');
 const smsService = require('../utils/smsService');
 
-const KIOSK_MATCH_THRESHOLD = 0.45;
+const KIOSK_MATCH_THRESHOLD = 0.55;
 
 // @desc    Get all enrolled users (students/teachers) with face descriptors for kiosk matching
 // @route   GET /api/kiosk/descriptors
@@ -195,6 +195,8 @@ exports.recordKioskAttendance = async (req, res) => {
       deviceId: req.body.deviceId || 'kiosk',
       location: req.body.location || undefined,
       createdBy: user.createdBy || null,
+      synced: !global.isOfflineMode,
+      origin: global.isOfflineMode ? 'local' : 'cloud',
     });
 
     // Send time-in SMS if phone number exists
