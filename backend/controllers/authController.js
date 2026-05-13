@@ -493,42 +493,79 @@ exports.faceLogin = async (req, res) => {
       // Don't fail the login if logging fails
     }
 
-    // Create attendance log for students and teachers
+    // Create or update attendance record for students and teachers
     let attendanceLogData = null;
+    let scanType = null;
 
-    try {
-      // Process and save attendance image
-      const imageResult = await processBase64Image(image, {
-        maxWidth: 300,
-        quality: 70,
-        format: 'jpeg',
-        subfolder: 'attendance',
-      });
-
-      // Create attendance record
-      const attendanceLog = await AttendanceLog.create({
-        userId: matchedUser._id,
-        userRole: matchedUser.role,
-        userName: matchedUser.name,
-        timestamp: now,
-        imagePath: imageResult.filePath,
-        deviceId: req.body.deviceId || null,
-        confidenceScore: 1 - bestMatch.distance,
-        status: 'present',
-        location: req.body.location || undefined,
-        createdBy: matchedUser.createdBy || null,
-      });
+    if (existingAttendance && existingAttendance.scanCount === 1) {
+      existingAttendance.timeOut = now;
+      existingAttendance.scanCount = 2;
+      existingAttendance.imagePath = existingAttendance.imagePath || null;
+      await existingAttendance.save();
 
       attendanceLogData = {
-        id: attendanceLog._id,
-        timestamp: attendanceLog.timestamp,
-        status: attendanceLog.status,
+        id: existingAttendance._id,
+        timestamp: existingAttendance.timestamp,
+        timeIn: existingAttendance.timeIn,
+        timeOut: existingAttendance.timeOut,
+        status: existingAttendance.status,
+        alreadyLogged: false,
       };
+      scanType = 'time-out';
+      console.log(`Time out recorded for ${matchedUser.name} (${matchedUser.role})`);
+    } else if (existingAttendance && existingAttendance.scanCount >= 2) {
+      attendanceLogData = {
+        id: existingAttendance._id,
+        timestamp: existingAttendance.timestamp,
+        timeIn: existingAttendance.timeIn,
+        timeOut: existingAttendance.timeOut,
+        status: existingAttendance.status,
+        alreadyLogged: true,
+      };
+      scanType = 'completed';
+      console.log(`Attendance already completed today for ${matchedUser.name} (${matchedUser.role})`);
+    } else {
+      // First scan of the day is time-in
+      try {
+        const imageResult = await processBase64Image(image, {
+          maxWidth: 300,
+          quality: 70,
+          format: 'jpeg',
+          subfolder: 'attendance',
+        });
 
-      console.log(`Attendance logged for ${matchedUser.name} (${matchedUser.role})`);
-    } catch (attendanceError) {
-      console.error('Failed to create attendance log:', attendanceError.message);
-      // Don't fail the login if attendance logging fails
+        const attendanceLog = await AttendanceLog.create({
+          userId: matchedUser._id,
+          userRole: matchedUser.role,
+          userName: matchedUser.name,
+          timestamp: now,
+          timeIn: now,
+          timeOut: null,
+          scanCount: 1,
+          imagePath: imageResult.filePath,
+          deviceId: req.body.deviceId || null,
+          confidenceScore: 1 - bestMatch.distance,
+          status: 'present',
+          location: req.body.location || undefined,
+          createdBy: matchedUser.createdBy || null,
+          synced: !global.isOfflineMode,
+          origin: global.isOfflineMode ? 'local' : 'cloud',
+        });
+
+        attendanceLogData = {
+          id: attendanceLog._id,
+          timestamp: attendanceLog.timestamp,
+          timeIn: attendanceLog.timeIn,
+          timeOut: attendanceLog.timeOut,
+          status: attendanceLog.status,
+          alreadyLogged: false,
+        };
+        scanType = 'time-in';
+        console.log(`Time in recorded for ${matchedUser.name} (${matchedUser.role})`);
+      } catch (attendanceError) {
+        console.error('Failed to create attendance log:', attendanceError.message);
+        // Don't fail the login if attendance logging fails
+      }
     }
 
     // Generate JWT token
@@ -545,9 +582,13 @@ exports.faceLogin = async (req, res) => {
     );
 
     // Return success response with token
+    const successMessage = alreadyLoggedToday 
+      ? 'Face recognized. You have already logged attendance today.'
+      : 'Face login successful. Attendance recorded.';
+
     res.status(200).json({
       success: true,
-      message: 'Face login successful. Attendance recorded.',
+      message: successMessage,
       token,
       user: {
         id: matchedUser._id,

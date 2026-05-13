@@ -88,35 +88,70 @@ exports.faceLogin = async (req, res) => {
       subfolder: 'attendance',
     });
 
-    // Create attendance log
-    const attendanceLog = await AttendanceLog.create({
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    let attendanceLog = await AttendanceLog.findOne({
       studentId: bestMatch.studentId,
-      course: bestMatch.course,
-      timestamp: new Date(),
-      imagePath: imageResult.filePath,
-      deviceId: deviceId || null,
-      confidenceScore: 1 - lowestDistance,
-      status: 'present',
-      location: location || undefined,
+      timestamp: { $gte: startOfDay, $lte: endOfDay },
     });
 
-    // Send SMS notification if phone number exists
-    if (bestMatch.phoneNumber) {
-      smsService.sendTimeInSMS(bestMatch.phoneNumber, bestMatch.name, attendanceLog.timestamp)
-        .then(result => {
-          if (result.success) {
-            console.log(`SMS notification sent to ${bestMatch.name}`);
-          } else {
-            console.log(`SMS notification failed for ${bestMatch.name}: ${result.message}`);
-          }
-        })
-        .catch(error => console.error('SMS sending error:', error));
+    let scanType;
+    if (attendanceLog && attendanceLog.scanCount === 1) {
+      attendanceLog.timeOut = now;
+      attendanceLog.scanCount = 2;
+      attendanceLog.imagePath = imageResult.filePath || attendanceLog.imagePath;
+      attendanceLog = await attendanceLog.save();
+      scanType = 'time-out';
+
+      if (bestMatch.phoneNumber) {
+        await smsService.sendTimeOutSMS(bestMatch.phoneNumber, bestMatch.name, attendanceLog.timeOut);
+      }
+    } else if (attendanceLog && attendanceLog.scanCount >= 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Attendance already completed for today',
+        data: {
+          studentId: bestMatch.studentId,
+          name: bestMatch.name,
+          course: bestMatch.course,
+          timeIn: attendanceLog.timeIn,
+          timeOut: attendanceLog.timeOut,
+        },
+      });
+    } else {
+      attendanceLog = await AttendanceLog.create({
+        userId: bestMatch._id,
+        userRole: 'student',
+        userName: bestMatch.name,
+        studentId: bestMatch.studentId,
+        course: bestMatch.course,
+        timestamp: now,
+        timeIn: now,
+        timeOut: null,
+        scanCount: 1,
+        imagePath: imageResult.filePath,
+        deviceId: deviceId || null,
+        confidenceScore: 1 - lowestDistance,
+        status: 'present',
+        location: location || undefined,
+        synced: !global.isOfflineMode,
+        origin: global.isOfflineMode ? 'local' : 'cloud',
+      });
+      scanType = 'time-in';
+
+      if (bestMatch.phoneNumber) {
+        await smsService.sendTimeInSMS(bestMatch.phoneNumber, bestMatch.name, attendanceLog.timeIn);
+      }
     }
 
     // Return success with matched student and attendance log
     res.status(200).json({
       success: true,
-      message: 'Attendance logged successfully',
+      message: scanType === 'time-out' ? 'Time Out recorded successfully' : 'Time In recorded successfully',
       data: {
         student: {
           studentId: bestMatch.studentId,
@@ -126,10 +161,14 @@ exports.faceLogin = async (req, res) => {
         attendance: {
           id: attendanceLog._id,
           timestamp: attendanceLog.timestamp,
+          timeIn: attendanceLog.timeIn,
+          timeOut: attendanceLog.timeOut,
           status: attendanceLog.status,
           imagePath: attendanceLog.imagePath,
           deviceId: attendanceLog.deviceId,
+          scanCount: attendanceLog.scanCount,
         },
+        scanType,
         match: {
           confidence: (1 - lowestDistance).toFixed(4),
           distance: lowestDistance.toFixed(4),
