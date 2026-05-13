@@ -32,17 +32,17 @@ const sendPhilSMS = async (phoneNumber, message) => {
     const senderId = (process.env.PHILSMS_SENDER_ID || 'PhilSMS').trim();
 
     if (!apiKey) {
-      console.warn('PhilSMS API key not configured. SMS notifications disabled.');
+      console.warn('[SMS] PhilSMS API key not configured. SMS notifications disabled.');
       return { success: false, message: 'SMS service not configured' };
     }
 
     if (!phoneNumber) {
-      console.warn(`Invalid phone number: ${phoneNumber}`);
+      console.warn(`[SMS] Invalid phone number: ${phoneNumber}`);
       return { success: false, message: 'Invalid phone number' };
     }
 
     const formattedPhone = formatPhoneNumber(phoneNumber);
-    console.log(`📱 Formatting phone ${phoneNumber} -> ${formattedPhone}`);
+    console.log(`[SMS] Phone formatted: ${phoneNumber} → ${formattedPhone}, Sender: ${senderId}`);
 
     const payload = {
       recipient: formattedPhone,
@@ -69,12 +69,12 @@ const sendPhilSMS = async (phoneNumber, message) => {
             response.data.success === true ||
             response.data.status === 'success')
         ) {
-          console.log(`✅ SMS sent successfully to ${formattedPhone} via ${url}`);
+          console.log(`[SMS] ✓ SMS sent successfully to ${formattedPhone}, Message ID: ${response.data.message_id || response.data.id}`);
           return { success: true, messageId: response.data.message_id || response.data.id };
         }
 
         lastError = response.data || { message: 'Unknown PhilSMS error', status: response.status };
-        console.error(`PhilSMS API error at ${url}:`, lastError);
+        console.error(`[SMS] ✗ PhilSMS API returned error:`, lastError);
 
         if (response.status === 404 || response.status === 403 || response.status === 500) {
           continue;
@@ -84,7 +84,7 @@ const sendPhilSMS = async (phoneNumber, message) => {
       } catch (error) {
         const status = error.response?.status;
         lastError = error.response?.data || error.message;
-        console.error(`Error sending SMS via PhilSMS at ${url}:`, lastError);
+        console.error(`[SMS] ✗ Error calling PhilSMS API (status ${status}):`, lastError);
 
         if (
           status === 404 ||
@@ -105,7 +105,7 @@ const sendPhilSMS = async (phoneNumber, message) => {
       message: `Failed to send SMS via PhilSMS after trying ${PHILSMS_API_URLS.length} endpoints`,
     };
   } catch (error) {
-    console.error('Error sending SMS via PhilSMS:', error.response?.data || error.message);
+    console.error('[SMS] ✗ Unexpected error in sendPhilSMS:', error.response?.data || error.message);
     return { success: false, message: error.response?.data?.message || error.message };
   }
 };
@@ -131,13 +131,25 @@ const formatDate = (date) => {
 // Send SMS for time in
 smsService.sendTimeInSMS = async (phoneNumber, userName, timeIn) => {
   try {
+    if (!phoneNumber) {
+      console.warn(`[SMS] Time-in SMS skipped: No phone number for user ${userName}`);
+      return { success: false, message: 'No phone number on file' };
+    }
+
     const time = formatTime(timeIn);
     const date = formatDate(timeIn);
     const messageBody = `FacePass: ${userName} successfully timed in at ${time} on ${date}.`;
 
-    return await sendPhilSMS(phoneNumber, messageBody);
+    console.log(`[SMS] Attempting to send time-in SMS to ${phoneNumber} for ${userName}`);
+    const result = await sendPhilSMS(phoneNumber, messageBody);
+    
+    if (!result.success) {
+      console.warn(`[SMS] Time-in SMS failed for ${userName}:`, result.message);
+    }
+    
+    return result;
   } catch (error) {
-    console.error(`Error sending time-in SMS for ${userName}:`, error.message);
+    console.error(`[SMS] Error sending time-in SMS for ${userName}:`, error.message);
     return { success: false, message: error.message };
   }
 };
@@ -145,13 +157,25 @@ smsService.sendTimeInSMS = async (phoneNumber, userName, timeIn) => {
 // Send SMS for time out
 smsService.sendTimeOutSMS = async (phoneNumber, userName, timeOut) => {
   try {
+    if (!phoneNumber) {
+      console.warn(`[SMS] Time-out SMS skipped: No phone number for user ${userName}`);
+      return { success: false, message: 'No phone number on file' };
+    }
+
     const time = formatTime(timeOut);
     const date = formatDate(timeOut);
     const messageBody = `FacePass: ${userName} successfully timed out at ${time} on ${date}.`;
 
-    return await sendPhilSMS(phoneNumber, messageBody);
+    console.log(`[SMS] Attempting to send time-out SMS to ${phoneNumber} for ${userName}`);
+    const result = await sendPhilSMS(phoneNumber, messageBody);
+    
+    if (!result.success) {
+      console.warn(`[SMS] Time-out SMS failed for ${userName}:`, result.message);
+    }
+    
+    return result;
   } catch (error) {
-    console.error(`Error sending time-out SMS for ${userName}:`, error.message);
+    console.error(`[SMS] Error sending time-out SMS for ${userName}:`, error.message);
     return { success: false, message: error.message };
   }
 };
@@ -159,6 +183,19 @@ smsService.sendTimeOutSMS = async (phoneNumber, userName, timeOut) => {
 // Send custom SMS
 smsService.sendCustomSMS = async (phoneNumber, message) => {
   return await sendPhilSMS(phoneNumber, message);
+};
+
+// Check SMS service status
+smsService.getStatus = () => {
+  const hasApiKey = !!process.env.PHILSMS_API_KEY?.trim();
+  const senderId = process.env.PHILSMS_SENDER_ID || 'PhilSMS';
+  
+  return {
+    configured: hasApiKey,
+    apiKeyPresent: hasApiKey ? '✓' : '✗',
+    senderId: senderId,
+    message: hasApiKey ? 'SMS service is ready' : 'SMS service is NOT configured - set PHILSMS_API_KEY in .env'
+  };
 };
 
 module.exports = smsService;
