@@ -97,10 +97,12 @@ exports.faceLogin = async (req, res) => {
     let attendanceLog = await AttendanceLog.findOne({
       studentId: bestMatch.studentId,
       timestamp: { $gte: startOfDay, $lte: endOfDay },
-    });
+      scanCount: 1,
+      timeOut: null,
+    }).sort({ timestamp: -1 });
 
     let scanType;
-    if (attendanceLog && attendanceLog.scanCount === 1) {
+    if (attendanceLog) {
       attendanceLog.timeOut = now;
       attendanceLog.scanCount = 2;
       attendanceLog.imagePath = imageResult.filePath || attendanceLog.imagePath;
@@ -110,18 +112,6 @@ exports.faceLogin = async (req, res) => {
       if (bestMatch.phoneNumber) {
         await smsService.sendTimeOutSMS(bestMatch.phoneNumber, bestMatch.name, attendanceLog.timeOut);
       }
-    } else if (attendanceLog && attendanceLog.scanCount >= 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Attendance already completed for today',
-        data: {
-          studentId: bestMatch.studentId,
-          name: bestMatch.name,
-          course: bestMatch.course,
-          timeIn: attendanceLog.timeIn,
-          timeOut: attendanceLog.timeOut,
-        },
-      });
     } else {
       attendanceLog = await AttendanceLog.create({
         userId: bestMatch._id,

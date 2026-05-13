@@ -118,27 +118,13 @@ exports.recordKioskAttendance = async (req, res) => {
     const existing = await AttendanceLog.findOne({
       userId: user._id,
       timestamp: { $gte: startOfDay, $lte: endOfDay },
-    });
+      scanCount: 1,
+      timeOut: null,
+    }).sort({ timestamp: -1 });
 
     // ── THIRD SCAN (or beyond) ──────────────────────────────────────────────
-    if (existing && existing.scanCount >= 2) {
-      return res.status(400).json({
-        success: false,
-        scanType: 'completed',
-        message: 'Attendance already completed for today',
-        data: {
-          userId: user._id,
-          name: user.name,
-          role: user.role,
-          department: user.department || '',
-          timeIn: existing.timeIn,
-          timeOut: existing.timeOut,
-        },
-      });
-    }
-
     // ── SECOND SCAN (time-out) ──────────────────────────────────────────────
-    if (existing && existing.scanCount === 1) {
+    if (existing) {
       existing.timeOut = now;
       existing.scanCount = 2;
       await existing.save();

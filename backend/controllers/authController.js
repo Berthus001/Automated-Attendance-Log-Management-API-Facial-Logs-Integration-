@@ -505,19 +505,22 @@ exports.faceLogin = async (req, res) => {
     matchedUser.lastLoginAt = now;
     await matchedUser.save();
 
-    // Check if attendance already logged today
+    // Find the latest open attendance session today. Completed sessions should
+    // not block another time-in/time-out cycle later in the day.
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const existingAttendance = await AttendanceLog.findOne({
+    const openAttendance = await AttendanceLog.findOne({
       userId: matchedUser._id,
       timestamp: {
         $gte: startOfDay,
         $lte: endOfDay,
       },
-    });
+      scanCount: 1,
+      timeOut: null,
+    }).sort({ timestamp: -1 });
 
     // Log the login
     try {
@@ -537,25 +540,25 @@ exports.faceLogin = async (req, res) => {
     let attendanceLogData = null;
     let scanType = null;
 
-    if (existingAttendance && existingAttendance.scanCount === 1) {
-      existingAttendance.timeOut = now;
-      existingAttendance.scanCount = 2;
-      existingAttendance.imagePath = existingAttendance.imagePath || null;
-      await existingAttendance.save();
+    if (openAttendance) {
+      openAttendance.timeOut = now;
+      openAttendance.scanCount = 2;
+      openAttendance.imagePath = openAttendance.imagePath || null;
+      await openAttendance.save();
 
       attendanceLogData = {
-        id: existingAttendance._id,
-        timestamp: existingAttendance.timestamp,
-        timeIn: existingAttendance.timeIn,
-        timeOut: existingAttendance.timeOut,
-        status: existingAttendance.status,
+        id: openAttendance._id,
+        timestamp: openAttendance.timestamp,
+        timeIn: openAttendance.timeIn,
+        timeOut: openAttendance.timeOut,
+        status: openAttendance.status,
         alreadyLogged: false,
       };
       scanType = 'time-out';
       console.log(`Time out recorded for ${matchedUser.name} (${matchedUser.role})`);
 
       if (matchedUser.phoneNumber) {
-        smsService.sendTimeOutSMS(matchedUser.phoneNumber, matchedUser.name, existingAttendance.timeOut)
+        smsService.sendTimeOutSMS(matchedUser.phoneNumber, matchedUser.name, openAttendance.timeOut)
           .then((result) => {
             if (result.success) {
               console.log(`[SMS] Time-out notification sent for ${matchedUser.name}`);
@@ -567,19 +570,8 @@ exports.faceLogin = async (req, res) => {
       } else {
         console.warn(`[SMS] Time-out SMS skipped: No phone number for ${matchedUser.name}`);
       }
-    } else if (existingAttendance && existingAttendance.scanCount >= 2) {
-      attendanceLogData = {
-        id: existingAttendance._id,
-        timestamp: existingAttendance.timestamp,
-        timeIn: existingAttendance.timeIn,
-        timeOut: existingAttendance.timeOut,
-        status: existingAttendance.status,
-        alreadyLogged: true,
-      };
-      scanType = 'completed';
-      console.log(`Attendance already completed today for ${matchedUser.name} (${matchedUser.role})`);
     } else {
-      // First scan of the day is time-in
+      // No open session today, so this scan starts a new time-in.
       try {
         const imageResult = await processBase64Image(image, {
           maxWidth: 300,
@@ -650,9 +642,7 @@ exports.faceLogin = async (req, res) => {
     );
 
     // Return success response with token
-    const successMessage = scanType === 'completed'
-      ? 'Face recognized. You have already logged attendance today.'
-      : scanType === 'time-out'
+    const successMessage = scanType === 'time-out'
         ? 'Face login successful. Time out recorded.'
         : 'Face login successful. Attendance recorded.';
 
