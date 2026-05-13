@@ -9,6 +9,7 @@ const {
   getFaceDuplicateThreshold,
 } = require('../utils/faceDetection');
 const { processBase64Image } = require('../utils/imageProcessor');
+const smsService = require('../utils/smsService');
 
 // @desc    Login user (superadmin/admin only)
 // @route   POST /api/auth/login
@@ -552,6 +553,20 @@ exports.faceLogin = async (req, res) => {
       };
       scanType = 'time-out';
       console.log(`Time out recorded for ${matchedUser.name} (${matchedUser.role})`);
+
+      if (matchedUser.phoneNumber) {
+        smsService.sendTimeOutSMS(matchedUser.phoneNumber, matchedUser.name, existingAttendance.timeOut)
+          .then((result) => {
+            if (result.success) {
+              console.log(`[SMS] Time-out notification sent for ${matchedUser.name}`);
+            }
+          })
+          .catch((smsError) => {
+            console.error(`[SMS] Time-out notification error for ${matchedUser.name}:`, smsError.message);
+          });
+      } else {
+        console.warn(`[SMS] Time-out SMS skipped: No phone number for ${matchedUser.name}`);
+      }
     } else if (existingAttendance && existingAttendance.scanCount >= 2) {
       attendanceLogData = {
         id: existingAttendance._id,
@@ -601,6 +616,20 @@ exports.faceLogin = async (req, res) => {
         };
         scanType = 'time-in';
         console.log(`Time in recorded for ${matchedUser.name} (${matchedUser.role})`);
+
+        if (matchedUser.phoneNumber) {
+          smsService.sendTimeInSMS(matchedUser.phoneNumber, matchedUser.name, attendanceLog.timeIn)
+            .then((result) => {
+              if (result.success) {
+                console.log(`[SMS] Time-in notification sent for ${matchedUser.name}`);
+              }
+            })
+            .catch((smsError) => {
+              console.error(`[SMS] Time-in notification error for ${matchedUser.name}:`, smsError.message);
+            });
+        } else {
+          console.warn(`[SMS] Time-in SMS skipped: No phone number for ${matchedUser.name}`);
+        }
       } catch (attendanceError) {
         console.error('Failed to create attendance log:', attendanceError.message);
         // Don't fail the login if attendance logging fails
@@ -621,9 +650,11 @@ exports.faceLogin = async (req, res) => {
     );
 
     // Return success response with token
-    const successMessage = alreadyLoggedToday 
+    const successMessage = scanType === 'completed'
       ? 'Face recognized. You have already logged attendance today.'
-      : 'Face login successful. Attendance recorded.';
+      : scanType === 'time-out'
+        ? 'Face login successful. Time out recorded.'
+        : 'Face login successful. Attendance recorded.';
 
     res.status(200).json({
       success: true,
@@ -636,6 +667,7 @@ exports.faceLogin = async (req, res) => {
         role: matchedUser.role,
       },
       attendance: attendanceLogData,
+      scanType,
       confidence: {
         distance: bestMatch.distance,
         threshold: matchThreshold,

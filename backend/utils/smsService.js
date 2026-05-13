@@ -4,6 +4,7 @@ const smsService = {};
 
 const PHILSMS_API_URLS = [
   'https://dashboard.philsms.com/api/v3/sms/send',
+  'https://app.philsms.com/api/v3/sms/send',
 ];
 
 const formatPhoneNumber = (phoneNumber) => {
@@ -69,8 +70,9 @@ const sendPhilSMS = async (phoneNumber, message) => {
             response.data.success === true ||
             response.data.status === 'success')
         ) {
-          console.log(`[SMS] ✓ SMS sent successfully to ${formattedPhone}, Message ID: ${response.data.message_id || response.data.id}`);
-          return { success: true, messageId: response.data.message_id || response.data.id };
+          const messageId = response.data.message_id || response.data.id || response.data.data?.uid || response.data.data?.id;
+          console.log(`[SMS] ✓ SMS sent successfully to ${formattedPhone}, Message ID: ${messageId || 'n/a'}`);
+          return { success: true, messageId };
         }
 
         lastError = response.data || { message: 'Unknown PhilSMS error', status: response.status };
