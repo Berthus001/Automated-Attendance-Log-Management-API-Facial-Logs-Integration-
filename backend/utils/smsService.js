@@ -2,65 +2,111 @@ const axios = require('axios');
 
 const smsService = {};
 
-const PHILSMS_API_URL = 'https://api.philsms.com/api/v3/sms/send';
+const PHILSMS_API_URLS = [
+  'https://dashboard.philsms.com/api/v3/sms/send',
+];
 
-// Send SMS via PhilSMS
+const formatPhoneNumber = (phoneNumber) => {
+  if (!phoneNumber) return phoneNumber;
+
+  const cleaned = phoneNumber.trim().replace(/[^0-9+]/g, '');
+
+  if (cleaned.startsWith('+63')) {
+    return cleaned.substring(1);
+  }
+
+  if (cleaned.startsWith('63')) {
+    return cleaned;
+  }
+
+  if (cleaned.startsWith('0')) {
+    return `63${cleaned.substring(1)}`;
+  }
+
+  return `63${cleaned}`;
+};
+
 const sendPhilSMS = async (phoneNumber, message) => {
   try {
-    const apiKey = process.env.PHILSMS_API_KEY;
+    const apiKey = process.env.PHILSMS_API_KEY?.trim();
+    const senderId = (process.env.PHILSMS_SENDER_ID || 'PhilSMS').trim();
 
     if (!apiKey) {
       console.warn('PhilSMS API key not configured. SMS notifications disabled.');
       return { success: false, message: 'SMS service not configured' };
     }
 
-    // Validate phone number (should contain digits and optionally + or leading 0)
     if (!phoneNumber) {
       console.warn(`Invalid phone number: ${phoneNumber}`);
       return { success: false, message: 'Invalid phone number' };
     }
 
-    // Format phone number for PhilSMS API (+63 format)
-    let formattedPhone;
-    if (phoneNumber.startsWith('+63')) {
-      formattedPhone = phoneNumber; // Already in correct format
-    } else if (phoneNumber.startsWith('63')) {
-      formattedPhone = `+${phoneNumber}`;
-    } else if (phoneNumber.startsWith('0')) {
-      formattedPhone = `+63${phoneNumber.substring(1)}`; // Replace 0 with +63
-    } else {
-      formattedPhone = `+63${phoneNumber}`;
-    }
-
+    const formattedPhone = formatPhoneNumber(phoneNumber);
     console.log(`📱 Formatting phone ${phoneNumber} -> ${formattedPhone}`);
 
-    const senderId = process.env.PHILSMS_SENDER_ID || 'FacePass';
-    const params = new URLSearchParams();
-    params.append('apikey', apiKey);
-    params.append('recipient', formattedPhone);
-    params.append('message', message);
-    params.append('sender', senderId);
+    const payload = {
+      recipient: formattedPhone,
+      sender_id: senderId,
+      type: 'plain',
+      message,
+    };
 
-    const response = await axios.post(
-      PHILSMS_API_URL,
-      params,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+    let lastError;
+    for (const url of PHILSMS_API_URLS) {
+      try {
+        const response = await axios.post(url, payload, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 15000,
+        });
+
+        if (
+          response.data &&
+          (response.data.success === 1 ||
+            response.data.success === true ||
+            response.data.status === 'success')
+        ) {
+          console.log(`✅ SMS sent successfully to ${formattedPhone} via ${url}`);
+          return { success: true, messageId: response.data.message_id || response.data.id };
+        }
+
+        lastError = response.data || { message: 'Unknown PhilSMS error', status: response.status };
+        console.error(`PhilSMS API error at ${url}:`, lastError);
+
+        if (response.status === 404 || response.status === 403 || response.status === 500) {
+          continue;
+        }
+
+        return { success: false, message: response.data?.message || 'Failed to send SMS' };
+      } catch (error) {
+        const status = error.response?.status;
+        lastError = error.response?.data || error.message;
+        console.error(`Error sending SMS via PhilSMS at ${url}:`, lastError);
+
+        if (
+          status === 404 ||
+          status === 403 ||
+          status === 500 ||
+          status === 502 ||
+          status === 503
+        ) {
+          continue;
+        }
+
+        return { success: false, message: error.response?.data?.message || error.message };
       }
-    );
-
-    if (response.data && (response.data.success === 1 || response.data.success === true || response.data.status === 'success')) {
-      console.log(`SMS sent successfully to ${formattedPhone}`);
-      return { success: true, messageId: response.data.message_id || response.data.id };
-    } else {
-      console.error('PhilSMS API error:', response.data);
-      return { success: false, message: response.data.message || 'Failed to send SMS' };
     }
+
+    return {
+      success: false,
+      message: `Failed to send SMS via PhilSMS after trying ${PHILSMS_API_URLS.length} endpoints`,
+    };
   } catch (error) {
-    console.error('Error sending SMS via PhilSMS:', error.message);
-    return { success: false, message: error.message };
+    console.error('Error sending SMS via PhilSMS:', error.response?.data || error.message);
+    return { success: false, message: error.response?.data?.message || error.message };
   }
 };
 
@@ -108,6 +154,11 @@ smsService.sendTimeOutSMS = async (phoneNumber, userName, timeOut) => {
     console.error(`Error sending time-out SMS for ${userName}:`, error.message);
     return { success: false, message: error.message };
   }
+};
+
+// Send custom SMS
+smsService.sendCustomSMS = async (phoneNumber, message) => {
+  return await sendPhilSMS(phoneNumber, message);
 };
 
 module.exports = smsService;
