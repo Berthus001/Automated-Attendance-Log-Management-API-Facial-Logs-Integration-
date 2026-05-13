@@ -2,39 +2,47 @@ const axios = require('axios');
 
 const smsService = {};
 
-const SEMAPHORE_API_URL = 'https://api.semaphore.co/api/v4/messages';
+const PHILSMS_API_URL = 'https://api.philsms.com/api/v3/sms/send';
 
-// Send SMS via Semaphore
-const sendSemaphoreSMS = async (phoneNumber, message) => {
+// Send SMS via PhilSMS
+const sendPhilSMS = async (phoneNumber, message) => {
   try {
-    const apiKey = process.env.SEMAPHORE_API_KEY;
+    const apiKey = process.env.PHILSMS_API_KEY;
 
     if (!apiKey) {
-      console.warn('Semaphore API key not configured. SMS notifications disabled.');
+      console.warn('PhilSMS API key not configured. SMS notifications disabled.');
       return { success: false, message: 'SMS service not configured' };
     }
 
-    // Validate phone number (should only contain digits)
-    if (!phoneNumber || !/^\d+$/.test(phoneNumber)) {
+    // Validate phone number (should contain digits and optionally + or leading 0)
+    if (!phoneNumber) {
       console.warn(`Invalid phone number: ${phoneNumber}`);
       return { success: false, message: 'Invalid phone number' };
     }
 
-    // Format phone number with country code (Philippines +63)
-    const formattedPhone = phoneNumber.startsWith('+')
-      ? phoneNumber
-      : phoneNumber.startsWith('0')
-      ? `+63${phoneNumber.substring(1)}`
-      : `+63${phoneNumber}`;
+    // Format phone number for PhilSMS API (+63 format)
+    let formattedPhone;
+    if (phoneNumber.startsWith('+63')) {
+      formattedPhone = phoneNumber; // Already in correct format
+    } else if (phoneNumber.startsWith('63')) {
+      formattedPhone = `+${phoneNumber}`;
+    } else if (phoneNumber.startsWith('0')) {
+      formattedPhone = `+63${phoneNumber.substring(1)}`; // Replace 0 with +63
+    } else {
+      formattedPhone = `+63${phoneNumber}`;
+    }
 
+    console.log(`📱 Formatting phone ${phoneNumber} -> ${formattedPhone}`);
+
+    const senderId = process.env.PHILSMS_SENDER_ID || 'FacePass';
     const params = new URLSearchParams();
     params.append('apikey', apiKey);
-    params.append('number', formattedPhone);
+    params.append('recipient', formattedPhone);
     params.append('message', message);
-    params.append('sendername', 'FacePass');
+    params.append('sender', senderId);
 
     const response = await axios.post(
-      SEMAPHORE_API_URL,
+      PHILSMS_API_URL,
       params,
       {
         headers: {
@@ -43,15 +51,15 @@ const sendSemaphoreSMS = async (phoneNumber, message) => {
       }
     );
 
-    if (response.data && response.data.success === 1) {
+    if (response.data && (response.data.success === 1 || response.data.success === true || response.data.status === 'success')) {
       console.log(`SMS sent successfully to ${formattedPhone}`);
-      return { success: true, messageId: response.data.message_id };
+      return { success: true, messageId: response.data.message_id || response.data.id };
     } else {
-      console.error('Semaphore API error:', response.data);
+      console.error('PhilSMS API error:', response.data);
       return { success: false, message: response.data.message || 'Failed to send SMS' };
     }
   } catch (error) {
-    console.error('Error sending SMS via Semaphore:', error.message);
+    console.error('Error sending SMS via PhilSMS:', error.message);
     return { success: false, message: error.message };
   }
 };
@@ -81,7 +89,7 @@ smsService.sendTimeInSMS = async (phoneNumber, userName, timeIn) => {
     const date = formatDate(timeIn);
     const messageBody = `FacePass: ${userName} successfully timed in at ${time} on ${date}.`;
 
-    return await sendSemaphoreSMS(phoneNumber, messageBody);
+    return await sendPhilSMS(phoneNumber, messageBody);
   } catch (error) {
     console.error(`Error sending time-in SMS for ${userName}:`, error.message);
     return { success: false, message: error.message };
@@ -95,7 +103,7 @@ smsService.sendTimeOutSMS = async (phoneNumber, userName, timeOut) => {
     const date = formatDate(timeOut);
     const messageBody = `FacePass: ${userName} successfully timed out at ${time} on ${date}.`;
 
-    return await sendSemaphoreSMS(phoneNumber, messageBody);
+    return await sendPhilSMS(phoneNumber, messageBody);
   } catch (error) {
     console.error(`Error sending time-out SMS for ${userName}:`, error.message);
     return { success: false, message: error.message };
