@@ -38,6 +38,9 @@ const studentSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       trim: true,
+      set: function(v) {
+        return typeof v === 'string' ? v.trim().replace(/[^0-9]/g, '') : v;
+      },
       default: '',
       validate: {
         validator: function(v) {
@@ -45,6 +48,17 @@ const studentSchema = new mongoose.Schema(
         },
         message: 'Phone number must contain only digits',
       },
+    },
+    synced: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    origin: {
+      type: String,
+      enum: ['cloud', 'local'],
+      default: 'cloud',
+      index: true,
     },
     isActive: {
       type: Boolean,

@@ -87,7 +87,7 @@ exports.getUser = async (req, res) => {
 // @access  Private (SuperAdmin can create admin only, Admin can create teacher/student)
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role, image, department, username, studentId, accountId } = req.body;
+    const { name, email, password, role, image, department, username, studentId, accountId, phoneNumber } = req.body;
 
     // Validate required fields
     if (!name || !role) {
@@ -284,6 +284,7 @@ exports.createUser = async (req, res) => {
       username: normalizedUsername,
       studentId: normalizedStudentId,
       accountId: normalizedAccountId,
+      phoneNumber: typeof phoneNumber === 'string' ? phoneNumber.trim() : '',
       faceDescriptor,
       createdBy: req.user._id,
     });

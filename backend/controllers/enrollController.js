@@ -15,7 +15,7 @@ const { isValidBase64Image } = require('../utils/imageHelpers');
  */
 exports.enrollStudent = async (req, res) => {
   try {
-    const { studentId, name, course, image } = req.body;
+    const { studentId, name, course, image, phoneNumber } = req.body;
 
     // Validate required fields
     if (!studentId || !name || !course || !image) {
@@ -122,6 +122,9 @@ exports.enrollStudent = async (req, res) => {
       course,
       faceDescriptor: faceResult.descriptor,
       email: req.body.email || undefined,
+      phoneNumber: typeof phoneNumber === 'string' ? phoneNumber.trim() : '',
+      synced: !global.isOfflineMode,
+      origin: global.isOfflineMode ? 'local' : 'cloud',
     });
 
     // Return success response
@@ -133,6 +136,7 @@ exports.enrollStudent = async (req, res) => {
         name: student.name,
         course: student.course,
         email: student.email,
+        phoneNumber: student.phoneNumber,
         imagePath: imageResult.filePath,
         faceDetection: {
           confidence: faceResult.confidence,
@@ -190,7 +194,7 @@ exports.getEnrolledStudent = async (req, res) => {
 exports.updateEnrolledStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { name, course, email, image } = req.body;
+    const { name, course, email, image, phoneNumber } = req.body;
 
     const student = await Student.findOne({ 
       studentId: studentId.toUpperCase() 
@@ -207,6 +211,7 @@ exports.updateEnrolledStudent = async (req, res) => {
     if (name) student.name = name;
     if (course) student.course = course;
     if (email) student.email = email;
+    if (typeof phoneNumber === 'string') student.phoneNumber = phoneNumber.trim();
 
     // Update face descriptor if new image provided
     if (image) {
@@ -286,6 +291,11 @@ exports.updateEnrolledStudent = async (req, res) => {
       });
     }
 
+    if (global.isOfflineMode) {
+      student.synced = false;
+      student.origin = 'local';
+    }
+
     await student.save();
 
     res.status(200).json({
@@ -296,6 +306,7 @@ exports.updateEnrolledStudent = async (req, res) => {
         name: student.name,
         course: student.course,
         email: student.email,
+        phoneNumber: student.phoneNumber,
         updatedAt: student.updatedAt,
       },
     });

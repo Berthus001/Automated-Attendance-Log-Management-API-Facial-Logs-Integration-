@@ -82,6 +82,9 @@ const userSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       trim: true,
+      set: function(v) {
+        return typeof v === 'string' ? v.trim().replace(/[^0-9]/g, '') : v;
+      },
       default: '',
       validate: {
         validator: function(v) {
