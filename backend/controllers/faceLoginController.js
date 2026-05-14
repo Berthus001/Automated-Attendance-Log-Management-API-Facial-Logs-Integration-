@@ -3,6 +3,7 @@ const { processBase64Image } = require('../utils/imageProcessor');
 const { extractFaceDescriptorFromBase64, compareFaceDescriptors } = require('../utils/faceDetection');
 const { isValidBase64Image } = require('../utils/imageHelpers');
 const smsService = require('../utils/smsService');
+const dbQueryWrapper = require('../utils/dbQueryWrapper');
 
 /**
  * Face login for attendance logging
@@ -34,8 +35,10 @@ exports.faceLogin = async (req, res) => {
       });
     }
 
-    // Get all active students
-    const students = await Student.find({ isActive: true }).select('studentId name course faceDescriptor phoneNumber');
+    // Get all active students (with auto-failover to local if offline)
+    const students = await dbQueryWrapper(() =>
+      Student.find({ isActive: true }).select('studentId name course faceDescriptor phoneNumber')
+    );
 
     if (students.length === 0) {
       return res.status(404).json({
@@ -94,43 +97,52 @@ exports.faceLogin = async (req, res) => {
     const endOfDay = new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
 
-    let attendanceLog = await AttendanceLog.findOne({
-      studentId: bestMatch.studentId,
-      timestamp: { $gte: startOfDay, $lte: endOfDay },
-      scanCount: 1,
-      timeOut: null,
-    }).sort({ timestamp: -1 });
+    let attendanceLog = await dbQueryWrapper(() =>
+      AttendanceLog.findOne({
+        studentId: bestMatch.studentId,
+        timestamp: { $gte: startOfDay, $lte: endOfDay },
+        scanCount: 1,
+        timeOut: null,
+      }).sort({ timestamp: -1 })
+    );
 
     let scanType;
+
     if (attendanceLog) {
       attendanceLog.timeOut = now;
       attendanceLog.scanCount = 2;
       attendanceLog.imagePath = imageResult.filePath || attendanceLog.imagePath;
-      attendanceLog = await attendanceLog.save();
+      if (global.isOfflineMode) {
+        attendanceLog.synced = false;
+        attendanceLog.origin = 'local';
+      }
+      attendanceLog = await dbQueryWrapper(() => attendanceLog.save());
       scanType = 'time-out';
 
       if (bestMatch.phoneNumber) {
         await smsService.sendTimeOutSMS(bestMatch.phoneNumber, bestMatch.name, attendanceLog.timeOut);
       }
     } else {
-      attendanceLog = await AttendanceLog.create({
-        userId: bestMatch._id,
-        userRole: 'student',
-        userName: bestMatch.name,
-        studentId: bestMatch.studentId,
-        course: bestMatch.course,
-        timestamp: now,
-        timeIn: now,
-        timeOut: null,
-        scanCount: 1,
-        imagePath: imageResult.filePath,
-        deviceId: deviceId || null,
-        confidenceScore: 1 - lowestDistance,
-        status: 'present',
-        location: location || undefined,
-        synced: !global.isOfflineMode,
-        origin: global.isOfflineMode ? 'local' : 'cloud',
-      });
+      attendanceLog = await dbQueryWrapper(() =>
+        AttendanceLog.create({
+          userId: bestMatch._id,
+          userRole: 'student',
+          userName: bestMatch.name,
+          studentId: bestMatch.studentId,
+          course: bestMatch.course,
+          timestamp: now,
+          timeIn: now,
+          timeOut: null,
+          scanCount: 1,
+          imagePath: imageResult.filePath,
+          deviceId: deviceId || null,
+          confidenceScore: 1 - lowestDistance,
+          status: 'present',
+          location: location || undefined,
+          synced: !global.isOfflineMode,
+          origin: global.isOfflineMode ? 'local' : 'cloud',
+        })
+      );
       scanType = 'time-in';
 
       if (bestMatch.phoneNumber) {
@@ -208,7 +220,9 @@ exports.verifyFace = async (req, res) => {
     }
 
     // Get all active students
-    const students = await Student.find({ isActive: true }).select('studentId name course faceDescriptor');
+    const students = await dbQueryWrapper(() =>
+      Student.find({ isActive: true }).select('studentId name course faceDescriptor')
+    );
 
     if (students.length === 0) {
       return res.status(404).json({
@@ -299,7 +313,9 @@ exports.getAttendanceStats = async (req, res) => {
     }
 
     // Get attendance logs
-    const logs = await AttendanceLog.find(query).sort({ timestamp: -1 });
+    const logs = await dbQueryWrapper(() =>
+      AttendanceLog.find(query).sort({ timestamp: -1 })
+    );
 
     // Calculate statistics
     const totalAttendance = logs.length;
@@ -307,8 +323,9 @@ exports.getAttendanceStats = async (req, res) => {
     const lateCount = logs.filter(log => log.status === 'late').length;
 
     // Get student info
-    const student = await Student.findOne({ studentId: studentId.toUpperCase() })
-      .select('-faceDescriptor');
+    const student = await dbQueryWrapper(() =>
+      Student.findOne({ studentId: studentId.toUpperCase() }).select('-faceDescriptor')
+    );
 
     if (!student) {
       return res.status(404).json({
