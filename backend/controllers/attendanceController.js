@@ -1,6 +1,11 @@
 const AttendanceLog = require('../models/AttendanceLog.model');
+const User = require('../models/User.model');
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getCourseValue = (log) => {
+  return log.course || log.userId?.department || '';
+};
 
 /**
  * Get attendance list for dashboard view.
@@ -126,13 +131,22 @@ exports.getAttendance = async (req, res) => {
     }
 
     if (course && typeof course === 'string' && course.trim()) {
-      query.course = new RegExp(escapeRegex(course.trim()), 'i');
+      const coursePattern = new RegExp(escapeRegex(course.trim()), 'i');
+      const matchingUsers = await User.find({
+        role: { $in: ['student', 'teacher'] },
+        department: coursePattern,
+      }).select('_id');
+
+      query.$or = [
+        { course: coursePattern },
+        { userId: { $in: matchingUsers.map((user) => user._id) } },
+      ];
     }
 
     const total = await AttendanceLog.countDocuments(query);
 
     const logs = await AttendanceLog.find(query)
-      .populate('userId', 'name role')
+      .populate('userId', 'name role department')
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(parsedLimit);
@@ -146,6 +160,8 @@ exports.getAttendance = async (req, res) => {
         userId: log.userId?._id || log.userId,
         name: log.userName || log.userId?.name || 'Unknown User',
         role: log.userRole,
+        course: getCourseValue(log),
+        department: log.userId?.department || '',
         createdBy: log.createdBy || null,
         scanCount: log.scanCount || 1,
         timestamp,
@@ -302,11 +318,20 @@ exports.exportAttendanceToPDF = async (req, res) => {
     }
 
     if (course && typeof course === 'string' && course.trim()) {
-      query.course = new RegExp(course.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const coursePattern = new RegExp(escapeRegex(course.trim()), 'i');
+      const matchingUsers = await User.find({
+        role: { $in: ['student', 'teacher'] },
+        department: coursePattern,
+      }).select('_id');
+
+      query.$or = [
+        { course: coursePattern },
+        { userId: { $in: matchingUsers.map((user) => user._id) } },
+      ];
     }
 
     const logs = await AttendanceLog.find(query)
-      .populate('userId', 'name role')
+      .populate('userId', 'name role department')
       .sort({ timestamp: -1 })
       .limit(1000); // Limit to prevent too large PDFs
 
@@ -341,12 +366,13 @@ exports.exportAttendanceToPDF = async (req, res) => {
     // Add table header
     const tableTop = doc.y;
     const colWidths = {
-      name: 120,
-      role: 60,
-      date: 90,
-      timeIn: 70,
-      timeOut: 70,
-      scans: 40,
+      name: 105,
+      role: 55,
+      course: 90,
+      date: 80,
+      timeIn: 65,
+      timeOut: 65,
+      scans: 35,
     };
 
     doc.fontSize(9).font('Helvetica-Bold');
@@ -355,6 +381,8 @@ exports.exportAttendanceToPDF = async (req, res) => {
     x += colWidths.name;
     doc.text('Role', x, tableTop, { width: colWidths.role, continued: false });
     x += colWidths.role;
+    doc.text('Course', x, tableTop, { width: colWidths.course, continued: false });
+    x += colWidths.course;
     doc.text('Date', x, tableTop, { width: colWidths.date, continued: false });
     x += colWidths.date;
     doc.text('Time In', x, tableTop, { width: colWidths.timeIn, continued: false });
@@ -410,6 +438,8 @@ exports.exportAttendanceToPDF = async (req, res) => {
       xPos += colWidths.name;
       doc.text(log.userRole || '-', xPos, rowY, { width: colWidths.role, continued: false });
       xPos += colWidths.role;
+      doc.text(getCourseValue(log) || '-', xPos, rowY, { width: colWidths.course, continued: false });
+      xPos += colWidths.course;
       doc.text(dateStr, xPos, rowY, { width: colWidths.date, continued: false });
       xPos += colWidths.date;
       doc.text(timeInStr, xPos, rowY, { width: colWidths.timeIn, continued: false });

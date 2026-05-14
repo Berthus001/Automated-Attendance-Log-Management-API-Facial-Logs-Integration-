@@ -474,6 +474,7 @@ const DashboardPage = () => {
                   <tr>
                     <th>Name</th>
                     <th>Role</th>
+                    <th>Course</th>
                     <th>Date</th>
                     <th>Time In</th>
                     <th>Time Out</th>
@@ -489,6 +490,7 @@ const DashboardPage = () => {
                           {log.role}
                         </span>
                       </td>
+                      <td>{log.course || log.department || 'N/A'}</td>
                       <td>{log.date || 'N/A'}</td>
                       <td>{log.timeInFormatted || log.time || 'N/A'}</td>
                       <td>{log.timeOutFormatted || <span className="time-pending">Pending</span>}</td>
