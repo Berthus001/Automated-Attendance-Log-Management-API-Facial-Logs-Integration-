@@ -74,21 +74,21 @@ const isAtlasAvailable = async () => {
   }
 };
 
-const switchToLocal = async () => {
-  const offlineUri = getOfflineUri();
-
-  if (!offlineUri) {
-    throw new Error('Local MongoDB URI is not configured. Set MONGO_URI_OFFLINE in your .env file.');
-  }
-
-  if (global.dbMode === 'local' && mongoose.connection.readyState === 1) {
-    return false;
-  }
-
-  console.warn('Switching active database connection to local MongoDB...');
-  await connectToDatabase(offlineUri, 'local');
-  return true;
-};
+// const switchToLocal = async () => {
+//   const offlineUri = getOfflineUri();
+//
+//   if (!offlineUri) {
+//     throw new Error('Local MongoDB URI is not configured. Set MONGO_URI_OFFLINE in your .env file.');
+//   }
+//
+//   if (global.dbMode === 'local' && mongoose.connection.readyState === 1) {
+//     return false;
+//   }
+//
+//   console.warn('Switching active database connection to local MongoDB...');
+//   await connectToDatabase(offlineUri, 'local');
+//   return true;
+// };
 
 const switchToAtlas = async () => {
   const atlasUri = getAtlasUri();
@@ -113,29 +113,36 @@ const switchToAtlas = async () => {
 const connectDB = async () => {
   const atlasUri = getAtlasUri();
 
-  if (isForceOffline()) {
-    console.log('FORCE_OFFLINE is enabled. Connecting to local MongoDB only.');
-    await switchToLocal();
-    return;
+  if (!atlasUri) {
+    throw new Error('MONGO_URI is not configured');
   }
 
-  if (atlasUri) {
-    try {
-      await connectToDatabase(atlasUri, 'cloud');
-      return;
-    } catch (err) {
-      console.warn('Atlas unavailable. Switching to local MongoDB...', err.message);
-    }
+  // Connect only to MongoDB Atlas (no local fallback)
+  try {
+    await connectToDatabase(atlasUri, 'cloud');
+  } catch (err) {
+    console.error('Failed to connect to MongoDB Atlas:', err.message);
+    console.error('Make sure your IP is whitelisted in MongoDB Atlas Network Access settings.');
+    throw err;
   }
 
-  await switchToLocal();
+  // Commented out: Local MongoDB fallback logic
+  // if (isForceOffline()) {
+  //   console.log('FORCE_OFFLINE is enabled. Connecting to local MongoDB only.');
+  //   await switchToLocal();
+  //   return;
+  // }
+  // 
+  // if (!isProduction) {
+  //   await switchToLocal();
+  // }
 };
 
 connectDB.isAtlasAvailable = isAtlasAvailable;
-connectDB.switchToLocal = switchToLocal;
+// connectDB.switchToLocal = switchToLocal; // Commented out: Local MongoDB not used
 connectDB.switchToAtlas = switchToAtlas;
 connectDB.getAtlasUri = getAtlasUri;
-connectDB.getOfflineUri = getOfflineUri;
-connectDB.isForceOffline = isForceOffline;
+// connectDB.getOfflineUri = getOfflineUri; // Commented out: Local MongoDB not used
+// connectDB.isForceOffline = isForceOffline; // Commented out: Local MongoDB not used
 
 module.exports = connectDB;
